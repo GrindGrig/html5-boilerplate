@@ -767,8 +767,62 @@
     return buf;
   }
 
+  // A short silent WAV. Playing it through an <audio> element while the
+  // transport runs makes iOS treat the page as media playback, so sound
+  // is not muted by the ring/silent switch.
+  function silentWav() {
+    const len = 800;
+    const bytes = new Uint8Array(44 + len);
+    const view = new DataView(bytes.buffer);
+    const str = (o, t) => Array.from(t).forEach((c, i) => view.setUint8(o + i, c.charCodeAt(0)));
+    str(0, 'RIFF');
+    view.setUint32(4, 36 + len, true);
+    str(8, 'WAVEfmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, 1, true);
+    view.setUint32(24, 8000, true);
+    view.setUint32(28, 8000, true);
+    view.setUint16(32, 1, true);
+    view.setUint16(34, 8, true);
+    str(36, 'data');
+    view.setUint32(40, len, true);
+    bytes.fill(128, 44);
+    let bin = '';
+    bytes.forEach((b) => {
+      bin += String.fromCharCode(b);
+    });
+    return `data:audio/wav;base64,${btoa(bin)}`;
+  }
+
+  function setMediaSession(active) {
+    if (!audio.keepAlive) return;
+    if (active) {
+      const p = audio.keepAlive.play();
+      if (p && p.catch) p.catch(() => {});
+    } else {
+      audio.keepAlive.pause();
+    }
+  }
+
+  function resumeAudio() {
+    if (audio.ctx && audio.ctx.state !== 'running' && audio.ctx.state !== 'closed') {
+      const p = audio.ctx.resume();
+      if (p && p.catch) p.catch(() => {});
+    }
+  }
+
   function initAudio() {
     if (!audio.ctx) {
+      try {
+        if (navigator.audioSession) navigator.audioSession.type = 'playback';
+      } catch {
+        // Not supported; the silent <audio> element below covers older iOS.
+      }
+      audio.keepAlive = new Audio(silentWav());
+      audio.keepAlive.loop = true;
+      audio.keepAlive.setAttribute('playsinline', '');
+
       const Ctx = window.AudioContext || window.webkitAudioContext;
       const ctx = new Ctx();
       audio.ctx = ctx;
@@ -809,7 +863,7 @@
       for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
       audio.noise = noise;
     }
-    if (audio.ctx.state === 'suspended') audio.ctx.resume();
+    resumeAudio();
     return audio.ctx;
   }
 
@@ -1368,6 +1422,11 @@
       const ev = mp.events[mp.idx];
       const t = mp.loopStart + ev.time;
       if (t >= until) return;
+      // Skip events the timer missed (e.g. while the phone screen was off).
+      if (t < audio.ctx.currentTime - 0.05) {
+        mp.idx++;
+        continue;
+      }
       if (ev.type === 'note') playTone(ev.midi, t, ev.dur, ev.vel, currentSound(), mp.out);
       else if ($('m-chords').checked) playChord(ev.chord, t, ev.dur, mp.out);
       mp.idx++;
@@ -1411,6 +1470,9 @@
   }
 
   function scheduleDrums(until) {
+    // If the timer stalled (background tab, locked screen), rejoin the grid
+    // now instead of firing every missed step at once.
+    if (dp.nextTime < audio.ctx.currentTime - 0.1) dp.nextTime = audio.ctx.currentTime + 0.05;
     while (dp.nextTime < until) {
       const steps = stepCount();
       if (dp.step >= steps) dp.step = 0;
@@ -1489,6 +1551,22 @@
   // Key signature as sharps (+) / flats (-), indexed by relative-major pitch class.
   const FIFTHS = [0, -5, 2, -3, 4, -1, 6, 1, -4, 3, -2, 5];
 
+  // On phones, hand the file to the share sheet (Files, AirDrop, a DAW app);
+  // elsewhere, or if sharing is unavailable, download it.
+  function saveFile(bytes, name) {
+    const coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+    if (coarse && typeof File === 'function' && navigator.canShare) {
+      const file = new File([bytes], name, { type: 'audio/midi' });
+      if (navigator.canShare({ files: [file] })) {
+        navigator.share({ files: [file], title: name }).catch((e) => {
+          if (e.name !== 'AbortError') download(bytes, name);
+        });
+        return;
+      }
+    }
+    download(bytes, name);
+  }
+
   function download(bytes, name) {
     const url = URL.createObjectURL(new Blob([bytes], { type: 'audio/midi' }));
     const a = document.createElement('a');
@@ -1534,7 +1612,7 @@
     });
 
     const name = `melody-${GENRES[m.genre].name}-${NOTE_NAMES[m.root]}-${m.scale}-${m.bpm}bpm.mid`;
-    download(midiFile([conductor, lead, chords]), name.toLowerCase().replace(/[^a-z0-9.#-]+/g, '-').replace(/#/g, 's'));
+    saveFile(midiFile([conductor, lead, chords]), name.toLowerCase().replace(/[^a-z0-9.#-]+/g, '-').replace(/#/g, 's'));
   }
 
   function exportDrums() {
@@ -1556,20 +1634,25 @@
     }
     const conductor = [tempoEvent(drum.bpm), { tick: 0, bytes: [0xff, 0x58, 0x04, 4, 2, 24, 8] }];
     const name = `drums-${PRESETS[drum.preset].name}-${drum.feel}${drum.triplet ? '-triplet' : ''}-${drum.bpm}bpm.mid`;
-    download(midiFile([conductor, track]), name.toLowerCase().replace(/[^a-z0-9.-]+/g, '-'));
+    saveFile(midiFile([conductor, track]), name.toLowerCase().replace(/[^a-z0-9.-]+/g, '-'));
   }
 
   // ---------------------------------------------------------------------
   // | Piano roll                                                        |
   // ---------------------------------------------------------------------
 
-  const roll = { canvas: null, ctx: null, cache: null, w: 0, h: 0 };
+  const roll = { canvas: null, ctx: null, cache: null, w: 0, h: 0, touchedAt: 0 };
   const BLACK = new Set([1, 3, 6, 8, 10]);
   const CHORD_LANE = 22;
+
+  // Narrow screens scroll the roll sideways instead of squashing the notes.
+  const ROLL_PX_PER_QUARTER = 16;
 
   function sizeRoll() {
     const c = roll.canvas;
     const dpr = window.devicePixelRatio || 1;
+    const minW = melody ? (melody.totalTicks / TPQ) * ROLL_PX_PER_QUARTER : 0;
+    c.style.width = `${Math.max(c.parentElement.clientWidth, Math.ceil(minW))}px`;
     const rect = c.getBoundingClientRect();
     roll.w = rect.width;
     roll.h = rect.height;
@@ -1679,6 +1762,17 @@
       g.fillRect(0, CHORD_LANE, x, roll.h - CHORD_LANE);
       g.fillStyle = '#ffffff';
       g.fillRect(Math.round(x), 0, 2, roll.h);
+      followPlayhead(x);
+    }
+  }
+
+  // Keeps the playhead visible when the roll scrolls, unless the user has
+  // just scrolled it themselves.
+  function followPlayhead(x) {
+    const wrap = roll.canvas.parentElement;
+    if (wrap.scrollWidth <= wrap.clientWidth || performance.now() - roll.touchedAt < 2500) return;
+    if (x < wrap.scrollLeft + 16 || x > wrap.scrollLeft + wrap.clientWidth - 48) {
+      wrap.scrollLeft = Math.max(0, x - 32);
     }
   }
 
@@ -1782,7 +1876,8 @@
 
   function generate() {
     melody = generateMelody(readMelodyInput());
-    roll.cache = null;
+    roll.canvas.parentElement.scrollLeft = 0;
+    sizeRoll();
     renderRolled();
     $('m-play').disabled = false;
     $('m-export').disabled = false;
@@ -1972,6 +2067,31 @@
     dBtn.classList.toggle('is-active', dp.playing);
     const all = mp.playing && dp.playing;
     $('play-all').textContent = all ? 'Restart all' : 'Play all';
+    const active = mp.playing || dp.playing;
+    setMediaSession(active);
+    setWakeLock(active);
+  }
+
+  // Keeps a phone screen awake while music is playing.
+  let wakeLock = null;
+
+  function setWakeLock(on) {
+    if (!('wakeLock' in navigator)) return;
+    if (on && !wakeLock) {
+      wakeLock = 'pending';
+      navigator.wakeLock.request('screen').then((lock) => {
+        wakeLock = lock;
+        lock.addEventListener('release', () => {
+          if (wakeLock === lock) wakeLock = null;
+        });
+        if (!mp.playing && !dp.playing) setWakeLock(false);
+      }).catch(() => {
+        wakeLock = null;
+      });
+    } else if (!on && wakeLock && wakeLock !== 'pending') {
+      wakeLock.release().catch(() => {});
+      wakeLock = null;
+    }
   }
 
   // ---------------------------------------------------------------------
@@ -1989,6 +2109,22 @@
 
     roll.canvas = $('m-roll');
     roll.ctx = roll.canvas.getContext('2d');
+    ['touchstart', 'wheel', 'pointerdown'].forEach((type) => {
+      roll.canvas.parentElement.addEventListener(type, () => {
+        roll.touchedAt = performance.now();
+      }, { passive: true });
+    });
+
+    // Phones suspend or interrupt audio when the screen locks or a call
+    // comes in; pick back up when the page is visible again.
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState !== 'visible') return;
+      if (mp.playing || dp.playing) {
+        resumeAudio();
+        setMediaSession(true);
+        setWakeLock(true);
+      }
+    });
     sizeRoll();
     let resizeTimer = null;
     window.addEventListener('resize', () => {

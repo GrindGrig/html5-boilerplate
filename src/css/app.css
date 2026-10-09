@@ -508,15 +508,17 @@ input[type="range"] {
 
 .roll-wrap {
   margin-top: 14px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: #0d0f15;
-  overflow: hidden;
 }
 
 .piano-roll {
   display: block;
   width: 100%;
+  max-width: none;
   height: 280px;
 }
 
@@ -676,13 +678,55 @@ input[type="range"] {
    ========================================================================== */
 
 @media (max-width: 640px) {
+  body {
+    /* Room for the fixed transport bar */
+    padding-bottom: calc(72px + env(safe-area-inset-bottom));
+  }
+
   .app-header {
-    padding: 12px 16px;
     position: static;
+    padding: calc(12px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) 12px calc(16px + env(safe-area-inset-left));
+  }
+
+  .tagline {
+    display: none;
+  }
+
+  /* The transport becomes a bottom bar within thumb reach. */
+  .transport {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 10;
+    flex-wrap: nowrap;
+    padding: 10px calc(16px + env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left));
+    border-top: 1px solid var(--line);
+    background: rgba(12, 14, 19, 0.96);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+  }
+
+  .transport .slider-field {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .transport .slider-field span {
+    display: none;
+  }
+
+  .transport .slider-field input {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .transport .btn {
+    flex: 0 0 auto;
   }
 
   .layout {
-    padding: 16px 16px 8px;
+    padding: 16px calc(16px + env(safe-area-inset-right)) 8px calc(16px + env(safe-area-inset-left));
     gap: 16px;
   }
 
@@ -691,7 +735,7 @@ input[type="range"] {
   }
 
   .app-footer {
-    padding: 8px 16px 24px;
+    padding: 8px calc(16px + env(safe-area-inset-right)) 24px calc(16px + env(safe-area-inset-left));
   }
 
   .controls {
@@ -699,24 +743,130 @@ input[type="range"] {
   }
 
   .segmented-field,
-  .field-key {
+  .field-key,
+  .field-wide,
+  .field-switches {
     grid-column: 1 / -1;
+  }
+
+  .field-switches {
+    padding-bottom: 0;
+  }
+
+  /* 16px stops iOS from zooming in when a field gets focus. */
+  input[type="number"],
+  select {
+    height: 44px;
+    font-size: 16px;
+  }
+
+  .btn {
+    height: 44px;
+  }
+
+  .segmented {
+    height: 44px;
+  }
+
+  .switch {
+    min-height: 44px;
+  }
+
+  .actions {
+    gap: 8px 10px;
   }
 
   .actions .spacer {
     display: none;
   }
 
+  .actions .slider-field {
+    flex: 1 1 160px;
+  }
+
+  .actions .slider-field input {
+    flex: 1;
+    width: auto;
+  }
+
   .piano-roll {
-    height: 220px;
+    height: 240px;
+  }
+
+  /* Sequencer: name + mute on one line, the steps below in two rows
+     (8 + 8 straight, 6 + 6 triplet) with finger-sized pads. */
+  .seq-wrap {
+    overflow: visible;
+  }
+
+  .sequencer {
+    min-width: 0;
+    gap: 12px;
+  }
+
+  .seq-ruler {
+    display: none;
   }
 
   .seq-row {
-    grid-template-columns: 84px 30px auto;
+    grid-template-columns: minmax(0, 1fr) 44px;
     gap: 6px;
   }
 
+  .seq-name,
   .seq-mute {
-    width: 30px;
+    height: 34px;
+  }
+
+  .seq-mute {
+    width: 44px;
+  }
+
+  .seq-steps {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 5px;
+  }
+
+  .step,
+  .triplet .step {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
+    height: 40px;
+  }
+}
+
+/* Touch screens: no sticky hover outlines, no double-tap zoom. */
+@media (hover: none) {
+  .step:hover {
+    border-color: #343b52;
+  }
+
+  .seq-name:hover {
+    border-color: var(--line);
+  }
+}
+
+button,
+select,
+label,
+input,
+.step {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.sequencer {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Landscape phones: keep the header from eating the short screen. */
+@media (max-height: 520px) {
+  .app-header {
+    position: static;
   }
 }

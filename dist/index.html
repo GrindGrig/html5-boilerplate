@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Melody &amp; Drum Studio</title>
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/app.css">
@@ -21,6 +21,10 @@
 
   <link rel="manifest" href="site.webmanifest">
   <meta name="theme-color" content="#101218">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Studio">
 </head>
 
 <body>
@@ -41,7 +45,7 @@
     <div class="transport">
       <label class="slider-field">
         <span>Master</span>
-        <input type="range" id="master-volume" min="0" max="1" step="0.01" value="0.8">
+        <input type="range" id="master-volume" min="0" max="1" step="0.01" value="0.8" aria-label="Master volume">
       </label>
       <button type="button" class="btn btn-primary" id="play-all">Play all</button>
       <button type="button" class="btn" id="stop-all">Stop all</button>
@@ -148,7 +152,7 @@
           <select id="d-preset"></select>
         </div>
 
-        <div class="field">
+        <div class="field field-wide">
           <label for="d-bpm">BPM</label>
           <div class="inline-pair">
             <input type="number" id="d-bpm" min="40" max="240" step="1" value="120" inputmode="numeric">
