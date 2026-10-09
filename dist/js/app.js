@@ -402,6 +402,15 @@
     return NOTE_NAMES[root] + q;
   }
 
+  // Free time signatures: any beat unit works, e.g. 7/5 or 4/3. Rhythms are
+  // written on the nearest power-of-two grid (5 -> 4, 3 -> 2, 12 -> 16) and
+  // time is scaled so each beat lasts exactly 1/den of a whole note. MIDI can
+  // only store power-of-two beat units, so exports use that grid plus a
+  // matching tempo change, which sounds identical.
+  function gridDen(den) {
+    return clamp(Math.pow(2, Math.round(Math.log2(den))), 1, 64);
+  }
+
   // Splits a bar into beat groups (in ticks). Compound meters (6/8, 9/8,
   // 12/8) group in threes; odd meters like 7/8 become 2+2+3.
   function beatGroups(num, den) {
@@ -786,14 +795,14 @@
     if (!num && !den) {
       // Mostly the genre's usual meters, sometimes anything at all.
       if (chance(0.12)) {
-        den = weighted([[4, 3], [8, 3], [16, 1], [2, 1]]);
-        num = numeratorFor(den);
+        den = weighted([[4, 3], [8, 3], [16, 1], [2, 1], [3, 0.5], [6, 0.5], [5, 0.3], [12, 0.3], [7, 0.2]]);
+        num = numeratorFor(gridDen(den));
       } else {
         [num, den] = weighted(g.meters).split('/').map(Number);
       }
       rolled.meter = true;
     } else if (!num) {
-      num = numeratorFor(den);
+      num = numeratorFor(gridDen(den));
       rolled.meter = true;
     } else if (!den) {
       den = denominatorFor(num);
@@ -843,7 +852,7 @@
     const scale = SCALES[s.scale];
     const steps = scale.steps;
     const n = steps.length;
-    const groups = beatGroups(s.num, s.den);
+    const groups = beatGroups(s.num, gridDen(s.den));
     const barTicks = groups.reduce((a, b) => a + b, 0);
     const bars = LENGTHS[s.length];
 
@@ -948,6 +957,9 @@
       totalTicks: bars * barTicks,
       swing: resolveSwing(s, groups),
       sevenths: !!g.sevenths,
+      gridDen: gridDen(s.den),
+      // Seconds per grid tick are scaled by this (1 for power-of-two meters).
+      tickScale: gridDen(s.den) / s.den,
     });
     buildParts(m);
     return m;
@@ -1746,6 +1758,8 @@
   const drum = {
     preset: 'pop',
     bpm: 110,
+    num: 4,
+    den: 4,
     feel: 'normal',
     triplet: false,
     swing: 0,
@@ -1784,8 +1798,28 @@
     return out;
   }
 
-  const stepCount = () => (drum.triplet ? 12 : 16);
+  // Grid steps per beat: 16th notes for straight time (a quarter-note beat
+  // gets 4, an eighth-note beat 2, a half-note beat 8), 3 for triplets.
+  const straightSteps = () => clamp(16 / gridDen(drum.den), 1, 16);
+  const stepsPerBeat = () => (drum.triplet ? 3 : straightSteps());
+  const stepCount = () => drum.num * stepsPerBeat();
   const currentRows = () => (drum.triplet ? drum.trip : drum.straight);
+
+  // Re-fits a pattern to another meter beat by beat: beat b takes the
+  // rhythm of source beat (b mod source beats), and each step keeps its
+  // position inside the beat when the new grid has it.
+  function fitRows(rows, beats1, spb1, beats2, spb2) {
+    const out = emptyRows(beats2 * spb2);
+    DRUMS.forEach((d) => {
+      for (let b = 0; b < beats2; b++) {
+        for (let st = 0; st < spb2; st++) {
+          const pos = (st * spb1) / spb2;
+          if (Number.isInteger(pos)) out[d.id][b * spb2 + st] = rows[d.id][(b % beats1) * spb1 + pos];
+        }
+      }
+    });
+    return out;
+  }
 
   function loadPreset(key) {
     const p = PRESETS[key];
@@ -1793,27 +1827,50 @@
     drum.bpm = p.bpm;
     drum.kit = p.kit;
     drum.swing = p.swing;
-    drum.straight = emptyRows(16);
+    // Presets are written as one bar of 4/4 and fitted to the current meter.
+    const straight = emptyRows(16);
     Object.keys(p.steps).forEach((id) => {
-      drum.straight[id] = parseRow(p.steps[id], 16);
+      straight[id] = parseRow(p.steps[id], 16);
     });
-    drum.trip = convertRows(drum.straight, 16, 12);
+    const trip = convertRows(straight, 16, 12);
     if (p.trip) {
       Object.keys(p.trip).forEach((id) => {
-        drum.trip[id] = parseRow(p.trip[id], 12);
+        trip[id] = parseRow(p.trip[id], 12);
       });
     }
+    drum.source = { straight, trip, beats: 4, spb: 4 };
+    drum.straight = fitRows(straight, 4, 4, drum.num, straightSteps());
+    drum.trip = fitRows(trip, 4, 3, drum.num, 3);
     drum.stale = { straight: false, trip: false };
     drum.triplet = !!p.triplet;
   }
 
+  // Changes the drum meter. The pattern is always fitted from its source
+  // (the preset, or the bar as last edited), so trying other meters and
+  // coming back loses nothing.
+  function setDrumMeter(num, den) {
+    num = clamp(Math.round(num) || drum.num, 1, 255);
+    den = clamp(Math.round(den) || drum.den, 1, 9999);
+    if (num === drum.num && den === drum.den) return false;
+    const oldCount = stepCount();
+    const src = drum.source;
+    drum.num = num;
+    drum.den = den;
+    drum.straight = fitRows(src.straight, src.beats, src.spb, num, straightSteps());
+    drum.trip = fitRows(src.trip, src.beats, 3, num, 3);
+    dp.step = Math.floor((dp.step * stepCount()) / oldCount) % stepCount();
+    return true;
+  }
+
   function setTriplet(on) {
     if (on === drum.triplet) return;
+    const straightCount = drum.num * straightSteps();
+    const tripCount = drum.num * 3;
     if (on && drum.stale.trip) {
-      drum.trip = convertRows(drum.straight, 16, 12);
+      drum.trip = convertRows(drum.straight, straightCount, tripCount);
       drum.stale.trip = false;
     } else if (!on && drum.stale.straight) {
-      drum.straight = convertRows(drum.trip, 12, 16);
+      drum.straight = convertRows(drum.trip, tripCount, straightCount);
       drum.stale.straight = false;
     }
     const before = stepCount();
@@ -1824,12 +1881,17 @@
   function markEdited() {
     if (drum.triplet) drum.stale.straight = true;
     else drum.stale.trip = true;
+    drum.source = { straight: drum.straight, trip: drum.trip, beats: drum.num, spb: straightSteps() };
   }
 
   // Length of one grid step in seconds.
+  // A beat lasts 4/den quarter notes, so 7/5 beats are 4/5 of a quarter.
   function drumStepDur(bpm) {
-    return (60 / (bpm || drum.bpm)) * (drum.triplet ? 1 / 3 : 1 / 4) * FEELS[drum.feel];
+    return ((60 / (bpm || drum.bpm)) * (4 / drum.den) / stepsPerBeat()) * FEELS[drum.feel];
   }
+
+  // Swing delays every second 16th, so it needs an even grid.
+  const canSwing = () => !drum.triplet && straightSteps() % 2 === 0;
 
   // ---------------------------------------------------------------------
   // | Transport                                                         |
@@ -1886,7 +1948,7 @@
   const ROLE_LEVEL = { lead: 1, chords: 0.55, bass: 0.9 };
 
   function melodyEvents(m) {
-    const spt = 60 / (m.bpm * TPQ);
+    const spt = (60 / (m.bpm * TPQ)) * m.tickScale;
     const events = [];
     m.parts.forEach((part) => {
       const inst = INSTRUMENTS[part.instrument];
@@ -1997,7 +2059,7 @@
       if (dp.step >= steps) dp.step = 0;
       const sd = drumStepDur();
       let t = dp.nextTime;
-      if (!drum.triplet && dp.step % 2 === 1) t += (sd * drum.swing) / 300;
+      if (canSwing() && dp.step % 2 === 1) t += (sd * drum.swing) / 300;
       const rows = currentRows();
       DRUMS.forEach((d) => {
         const v = rows[d.id][dp.step];
@@ -2165,8 +2227,8 @@
 
     const conductor = [
       { tick: 0, bytes: textEvent(0x03, 'Melody & Drum Studio') },
-      tempoEvent(m.bpm),
-      { tick: 0, bytes: [0xff, 0x58, 0x04, m.num, Math.log2(m.den), 24, 8] },
+      tempoEvent(m.bpm / m.tickScale),
+      { tick: 0, bytes: [0xff, 0x58, 0x04, m.num, Math.log2(m.gridDen), 24, 8] },
       { tick: 0, bytes: [0xff, 0x59, 0x02, sf & 255, scale.minor ? 1 : 0] },
     ];
 
@@ -2206,20 +2268,21 @@
     return { conductor, tracks, length: m.totalTicks * k };
   }
 
-  // The drum pattern on channel 10, looped until `length` ticks
-  // (by default about four bars of 4/4).
-  function drumTrack(length) {
+  // The drum pattern on channel 10, looped until `length` ticks (by default
+  // about four bars). `quarterTicks` is how many file ticks one real quarter
+  // note lasts, which differs from MIDI_TPQ in free meters.
+  function drumTrack(length, quarterTicks) {
     const rows = currentRows();
     const steps = stepCount();
-    const stepTicks = (drum.triplet ? MIDI_TPQ / 3 : MIDI_TPQ / 4) * FEELS[drum.feel];
+    const stepTicks = ((quarterTicks * (4 / drum.den)) / stepsPerBeat()) * FEELS[drum.feel];
     const loopTicks = steps * stepTicks;
-    const end = length || Math.max(1, Math.round((MIDI_TPQ * 16) / loopTicks)) * loopTicks;
+    const end = length || Math.max(1, Math.round(4 / FEELS[drum.feel])) * loopTicks;
     let track = [{ tick: 0, bytes: textEvent(0x03, `Drums - ${PRESETS[drum.preset].name}`) }];
     for (let base = 0; base < end; base += loopTicks) {
       for (let s = 0; s < steps; s++) {
         let tick = base + s * stepTicks;
         if (tick >= end) break;
-        if (!drum.triplet && s % 2 === 1) tick += (stepTicks * drum.swing) / 300;
+        if (canSwing() && s % 2 === 1) tick += (stepTicks * drum.swing) / 300;
         DRUMS.forEach((d) => {
           const v = rows[d.id][s];
           if (v && !drum.muted.has(d.id)) track = track.concat(noteEvents(9, Math.round(tick), 60, d.note, v === 2 ? 120 : 80));
@@ -2246,13 +2309,15 @@
   function exportMelodyAndDrums() {
     if (!melody) return;
     const t = melodyTracks(melody);
-    saveFile(midiFile([t.conductor].concat(t.tracks, [drumTrack(t.length)])), melodyName(melody, '-with-drums'));
+    const quarterTicks = MIDI_TPQ / melody.tickScale;
+    saveFile(midiFile([t.conductor].concat(t.tracks, [drumTrack(t.length, quarterTicks)])), melodyName(melody, '-with-drums'));
   }
 
   function exportDrums() {
-    const conductor = [tempoEvent(drum.bpm), { tick: 0, bytes: [0xff, 0x58, 0x04, 4, 2, 24, 8] }];
-    const name = `drums-${PRESETS[drum.preset].name}-${drum.feel}${drum.triplet ? '-triplet' : ''}-${drum.bpm}bpm.mid`;
-    saveFile(midiFile([conductor, drumTrack()]), fileName(name));
+    const scale = gridDen(drum.den) / drum.den;
+    const conductor = [tempoEvent(drum.bpm / scale), { tick: 0, bytes: [0xff, 0x58, 0x04, drum.num, Math.log2(gridDen(drum.den)), 24, 8] }];
+    const name = `drums-${PRESETS[drum.preset].name}-${drum.num}-${drum.den}-${drum.feel}${drum.triplet ? '-triplet' : ''}-${drum.bpm}bpm.mid`;
+    saveFile(midiFile([conductor, drumTrack(0, MIDI_TPQ / scale)]), fileName(name));
   }
 
   // ---------------------------------------------------------------------
@@ -2454,7 +2519,6 @@
       const v = parseInt($(id).value, 10);
       return Number.isFinite(v) ? clamp(v, min, max) : '';
     };
-    const den = $('m-ts-den').value;
     const root = $('m-key-root').value;
     return {
       genre: $('m-genre').value,
@@ -2462,7 +2526,7 @@
       bpm: num('m-bpm', 30, 300),
       // 255 is the most a MIDI file can store for beats per bar.
       tsNum: num('m-ts-num', 1, 255),
-      tsDen: den ? Number(den) : '',
+      tsDen: num('m-ts-den', 1, 9999),
       root: root === '' ? '' : Number(root),
       scale: $('m-key-mode').value,
       length: $('m-length').value,
@@ -2658,7 +2722,7 @@
   const UNLOCK_ICON = '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5"></rect><path d="M5.5 7V5a2.5 2.5 0 0 1 4.9-.7"></path></svg>';
 
   function lockableSettings(m) {
-    const secs = Math.round((m.totalTicks * 60) / (m.bpm * TPQ));
+    const secs = Math.round(((m.totalTicks * 60) / (m.bpm * TPQ)) * m.tickScale);
     return [
       { label: 'Genre', value: GENRES[m.genre].name, fields: { 'm-genre': m.genre } },
       { label: 'Mood', value: MOODS[m.mood].name, fields: { 'm-mood': m.mood } },
@@ -2761,10 +2825,11 @@
   function renderGrid() {
     const grid = $('d-grid');
     const steps = stepCount();
-    const groupSize = drum.triplet ? 3 : 4;
+    const groupSize = stepsPerBeat();
     const rows = currentRows();
     grid.innerHTML = '';
     grid.classList.toggle('triplet', drum.triplet);
+    grid.className = grid.className.replace(/\bspb-\d+\b/g, '').trim() + ` spb-${groupSize}`;
     stepEls = Array.from({ length: steps }, () => []);
 
     const ruler = document.createElement('div');
@@ -2780,7 +2845,8 @@
       for (let s = 0; s < groupSize; s++) {
         const num = document.createElement('span');
         num.className = 'step-num';
-        num.textContent = s === 0 ? String(gi + 1) : (drum.triplet ? ['', 'trip', 'let'][s] : ['', 'e', '&', 'a'][s]);
+        const subLabels = { 2: ['', '&'], 3: ['', 'trip', 'let'], 4: ['', 'e', '&', 'a'] }[groupSize] || [];
+        num.textContent = s === 0 ? String(gi + 1) : (subLabels[s] || '');
         group.appendChild(num);
       }
       rulerSteps.appendChild(group);
@@ -2862,9 +2928,9 @@
 
   function updateFeelInfo() {
     const perceived = Math.round(drum.bpm / FEELS[drum.feel]);
-    const grid = drum.triplet ? '8th-note triplets (12 steps per cycle)' : '16th notes (16 steps per cycle)';
+    const grid = drum.triplet ? `triplets (${stepCount()} steps per cycle)` : `${stepsPerBeat()} step${stepsPerBeat() > 1 ? 's' : ''} per beat (${stepCount()} per cycle)`;
     const span = { half: 'two bars', normal: 'one bar', double: 'half a bar' }[drum.feel];
-    $('d-feel-info').textContent = `${FEEL_NAMES[drum.feel]} · grid in ${grid} · one cycle = ${span} of 4/4 at ${drum.bpm} BPM` +
+    $('d-feel-info').textContent = `${FEEL_NAMES[drum.feel]} · ${grid} · one cycle = ${span} of ${drum.num}/${drum.den} at ${drum.bpm} BPM` +
       (drum.feel === 'normal' ? '' : ` (feels like ${perceived} BPM)`);
   }
 
@@ -2875,7 +2941,9 @@
     $('d-kit').value = drum.kit;
     $('d-swing').value = drum.swing;
     $('d-swing-out').textContent = `${drum.swing}%`;
-    $('d-swing').disabled = drum.triplet;
+    $('d-swing').disabled = !canSwing();
+    $('d-ts-num').value = drum.num;
+    $('d-ts-den').value = drum.den;
     $('d-triplet').checked = drum.triplet;
     $('d-humanize').checked = drum.humanize;
     document.querySelectorAll('input[name="d-feel"]').forEach((r) => {
@@ -2896,7 +2964,7 @@
   function addVariation() {
     const rows = currentRows();
     const steps = stepCount();
-    const off = (s) => s % (drum.triplet ? 3 : 4) !== 0;
+    const off = (s) => stepsPerBeat() === 1 || s % stepsPerBeat() !== 0;
     const tweak = (id, n, val) => {
       for (let i = 0; i < n; i++) {
         const s = randInt(0, steps - 1);
@@ -3076,13 +3144,22 @@
       initAudio();
       startDrums(nextMelodyBar(audio.ctx.currentTime + 0.06));
     });
+    const onDrumMeter = () => {
+      if (setDrumMeter(Number($('d-ts-num').value), Number($('d-ts-den').value))) renderGrid();
+      syncDrumControls();
+    };
+    $('d-ts-num').addEventListener('change', onDrumMeter);
+    $('d-ts-den').addEventListener('change', onDrumMeter);
     $('d-sync').addEventListener('click', () => {
-      if (melody) setDrumBpm(melody.bpm);
+      if (!melody) return;
+      setDrumBpm(melody.bpm);
+      if (setDrumMeter(melody.num, melody.den)) renderGrid();
+      syncDrumControls();
     });
     $('d-vary').addEventListener('click', addVariation);
     $('d-clear').addEventListener('click', () => {
-      if (drum.triplet) drum.trip = emptyRows(12);
-      else drum.straight = emptyRows(16);
+      if (drum.triplet) drum.trip = emptyRows(stepCount());
+      else drum.straight = emptyRows(stepCount());
       markEdited();
       renderGrid();
     });
@@ -3116,6 +3193,8 @@
       initAudio();
       if (!melody) generate();
       setDrumBpm(melody.bpm);
+      if (setDrumMeter(melody.num, melody.den)) renderGrid();
+      syncDrumControls();
       const at = audio.ctx.currentTime + 0.1;
       startMelody(at);
       startDrums(at);

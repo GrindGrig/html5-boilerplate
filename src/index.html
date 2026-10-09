@@ -91,16 +91,7 @@
           <div class="inline-pair">
             <input type="number" id="m-ts-num" name="tsNum" min="1" max="255" step="1" placeholder="?" inputmode="numeric" aria-labelledby="m-ts-label" aria-label="Beats per bar">
             <span class="slash" aria-hidden="true">/</span>
-            <select id="m-ts-den" name="tsDen" aria-label="Beat unit">
-              <option value="">?</option>
-              <option value="1">1</option>
-              <option value="2">2</option>
-              <option value="4">4</option>
-              <option value="8">8</option>
-              <option value="16">16</option>
-              <option value="32">32</option>
-              <option value="64">64</option>
-            </select>
+            <input type="number" id="m-ts-den" name="tsDen" min="1" step="1" placeholder="?" inputmode="numeric" aria-label="Beat unit (any whole number, e.g. 4, 8, 5 or 3)">
           </div>
         </div>
 
@@ -175,13 +166,22 @@
     <section class="panel panel-drums" aria-labelledby="drums-title">
       <div class="panel-head">
         <h2 id="drums-title">Drum machine</h2>
-        <p class="hint">Pick a genre preset, then change the feel or switch to triplets. Click a step to cycle <em>off → hit → accent</em>. Click a drum name to hear it.</p>
+        <p class="hint">Pick a genre preset and any time signature, then change the feel or switch to triplets. Click a step to cycle <em>off → hit → accent</em>. Click a drum name to hear it.</p>
       </div>
 
       <div class="controls">
         <div class="field">
           <label for="d-preset">Genre preset</label>
           <select id="d-preset"></select>
+        </div>
+
+        <div class="field">
+          <span class="label" id="d-ts-label">Time signature</span>
+          <div class="inline-pair">
+            <input type="number" id="d-ts-num" min="1" max="255" step="1" value="4" inputmode="numeric" aria-label="Drum beats per bar">
+            <span class="slash" aria-hidden="true">/</span>
+            <input type="number" id="d-ts-den" min="1" step="1" value="4" inputmode="numeric" aria-label="Drum beat unit">
+          </div>
         </div>
 
         <div class="field field-wide">
@@ -219,7 +219,7 @@
 
       <div class="actions">
         <button type="button" class="btn btn-primary btn-drums" id="d-play">Play</button>
-        <button type="button" class="btn" id="d-sync">Match melody BPM</button>
+        <button type="button" class="btn" id="d-sync">Match melody tempo &amp; meter</button>
         <button type="button" class="btn" id="d-vary">Variation</button>
         <button type="button" class="btn" id="d-clear">Clear</button>
         <label class="slider-field">

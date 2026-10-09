@@ -1042,6 +1042,17 @@ input[type="range"] {
     gap: 5px;
   }
 
+  /* Beats with few steps sit four to a row; long beats get a row each. */
+  .sequencer.spb-1 .seq-steps,
+  .sequencer.spb-2 .seq-steps {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .sequencer.spb-8 .seq-steps,
+  .sequencer.spb-16 .seq-steps {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .step,
   .triplet .step {
     flex: 1 1 0;
