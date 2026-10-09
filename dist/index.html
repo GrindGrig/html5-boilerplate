@@ -132,8 +132,10 @@
         </label>
         <span class="spacer"></span>
         <button type="button" class="btn btn-ghost" id="m-reset">Reset all to random</button>
-        <button type="button" class="btn btn-ghost" id="m-export" disabled>Export MIDI</button>
+        <button type="button" class="btn btn-ghost" id="m-export" disabled>Download melody MIDI</button>
+        <button type="button" class="btn btn-ghost" id="m-export-all" disabled>Download melody + drums MIDI</button>
       </div>
+      <p class="save-status" aria-live="polite"></p>
 
       <div class="rolled" id="m-rolled" aria-live="polite">
         <p class="rolled-empty">No melody yet. Press <strong>Generate</strong>.</p>
@@ -200,8 +202,9 @@
           <input type="range" id="d-volume" min="0" max="1" step="0.01" value="0.8">
         </label>
         <span class="spacer"></span>
-        <button type="button" class="btn btn-ghost" id="d-export">Export MIDI</button>
+        <button type="button" class="btn btn-ghost" id="d-export">Download drums MIDI</button>
       </div>
+      <p class="save-status" aria-live="polite"></p>
 
       <p class="feel-info" id="d-feel-info" aria-live="polite"></p>
 

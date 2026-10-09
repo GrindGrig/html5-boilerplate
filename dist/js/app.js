@@ -1636,9 +1636,66 @@
   // Key signature as sharps (+) / flats (-), indexed by relative-major pitch class.
   const FIFTHS = [0, -5, 2, -3, 4, -1, 6, 1, -4, 3, -2, 5];
 
+  const CRC_TABLE = Array.from({ length: 256 }, (_, n) => {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+    return c >>> 0;
+  });
+
+  function crc32(bytes) {
+    let c = 0xffffffff;
+    for (let i = 0; i < bytes.length; i++) c = CRC_TABLE[(c ^ bytes[i]) & 255] ^ (c >>> 8);
+    return (c ^ 0xffffffff) >>> 0;
+  }
+
+  // A one-file zip archive (stored, no compression).
+  function zipOne(name, data) {
+    const nameBytes = Array.from(name).map((ch) => ch.charCodeAt(0) & 0x7f);
+    const crc = crc32(data);
+    const u16 = (n) => [n & 255, (n >>> 8) & 255];
+    const le32 = (n) => [n & 255, (n >>> 8) & 255, (n >>> 16) & 255, (n >>> 24) & 255];
+    const common = [20, 0, 0, 0, 0, 0, 0, 0, 0x21, 0].concat(le32(crc), le32(data.length), le32(data.length), u16(nameBytes.length));
+    const local = [0x50, 0x4b, 3, 4].concat(common, [0, 0], nameBytes);
+    const central = [0x50, 0x4b, 1, 2, 20, 0].concat(common, new Array(16).fill(0), nameBytes);
+    const end = [0x50, 0x4b, 5, 6, 0, 0, 0, 0, 1, 0, 1, 0].concat(le32(central.length), le32(local.length + data.length), [0, 0]);
+    const out = new Uint8Array(local.length + data.length + central.length + end.length);
+    out.set(local, 0);
+    out.set(data, local.length);
+    out.set(central, local.length + data.length);
+    out.set(end, local.length + data.length + central.length);
+    return out;
+  }
+
+  // Inside the claude.ai viewer, files go through its `downloads`
+  // capability, which accepts .zip but not .mid, so the MIDI file is zipped.
+  let viewerDownloads = null;
+
+  function showSaveStatus(text) {
+    document.querySelectorAll('.save-status').forEach((el) => {
+      el.textContent = text;
+    });
+    clearTimeout(showSaveStatus.timer);
+    showSaveStatus.timer = setTimeout(() => showSaveStatus(''), 6000);
+  }
+
+  function saveFile(bytes, name) {
+    if (viewerDownloads) {
+      const zipName = name.replace(/\.mid$/, '.zip');
+      viewerDownloads.save({ filename: zipName, data: zipOne(name, bytes) }).then(() => {
+        showSaveStatus(`Saved ${zipName}. Open it to get the MIDI file.`);
+      }).catch((e) => {
+        if (e && e.code === 'declined') return;
+        if (e && e.code === 'rate_limited') showSaveStatus('A save is already waiting for you to confirm.');
+        else showSaveStatus('Saving files isn\'t available here.');
+      });
+      return;
+    }
+    saveLocalFile(bytes, name);
+  }
+
   // On phones, hand the file to the share sheet (Files, AirDrop, a DAW app);
   // elsewhere, or if sharing is unavailable, download it.
-  function saveFile(bytes, name) {
+  function saveLocalFile(bytes, name) {
     const coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
     if (coarse && typeof File === 'function' && navigator.canShare) {
       const file = new File([bytes], name, { type: 'audio/midi' });
@@ -1663,9 +1720,10 @@
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
-  function exportMelody() {
-    if (!melody) return;
-    const m = melody;
+  const fileName = (text) => text.toLowerCase().replace(/#/g, 's').replace(/[^a-z0-9.-]+/g, '-');
+
+  // Conductor, melody and chord tracks for the generated melody.
+  function melodyTracks(m) {
     const scale = SCALES[m.scale];
     const k = MIDI_TPQ / TPQ;
     const at = (t) => Math.round(swingTick(t, m.swing) * k);
@@ -1696,20 +1754,22 @@
       chords = chords.concat(noteEvents(1, start, dur, 36 + c.pcs[0], 85));
     });
 
-    const name = `melody-${GENRES[m.genre].name}-${NOTE_NAMES[m.root]}-${m.scale}-${m.bpm}bpm.mid`;
-    saveFile(midiFile([conductor, lead, chords]), name.toLowerCase().replace(/[^a-z0-9.#-]+/g, '-').replace(/#/g, 's'));
+    return { conductor, lead, chords, length: m.totalTicks * k };
   }
 
-  function exportDrums() {
+  // The drum pattern on channel 10, looped until `length` ticks
+  // (by default about four bars of 4/4).
+  function drumTrack(length) {
     const rows = currentRows();
     const steps = stepCount();
     const stepTicks = (drum.triplet ? MIDI_TPQ / 3 : MIDI_TPQ / 4) * FEELS[drum.feel];
     const loopTicks = steps * stepTicks;
-    const cycles = Math.max(1, Math.round((MIDI_TPQ * 16) / loopTicks)); // about 4 bars of 4/4
+    const end = length || Math.max(1, Math.round((MIDI_TPQ * 16) / loopTicks)) * loopTicks;
     let track = [{ tick: 0, bytes: textEvent(0x03, `Drums - ${PRESETS[drum.preset].name}`) }];
-    for (let c = 0; c < cycles; c++) {
+    for (let base = 0; base < end; base += loopTicks) {
       for (let s = 0; s < steps; s++) {
-        let tick = c * loopTicks + s * stepTicks;
+        let tick = base + s * stepTicks;
+        if (tick >= end) break;
         if (!drum.triplet && s % 2 === 1) tick += (stepTicks * drum.swing) / 300;
         DRUMS.forEach((d) => {
           const v = rows[d.id][s];
@@ -1717,9 +1777,31 @@
         });
       }
     }
+    return track;
+  }
+
+  function melodyName(m, suffix) {
+    return fileName(`melody-${GENRES[m.genre].name}-${MOODS[m.mood].name}-${NOTE_NAMES[m.root]}-${m.scale}-${m.bpm}bpm${suffix}.mid`);
+  }
+
+  function exportMelody() {
+    if (!melody) return;
+    const t = melodyTracks(melody);
+    saveFile(midiFile([t.conductor, t.lead, t.chords]), melodyName(melody, ''));
+  }
+
+  // Melody, chords and drums in one file, at the melody's tempo and length
+  // (the same way Play all plays them together).
+  function exportMelodyAndDrums() {
+    if (!melody) return;
+    const t = melodyTracks(melody);
+    saveFile(midiFile([t.conductor, t.lead, t.chords, drumTrack(t.length)]), melodyName(melody, '-with-drums'));
+  }
+
+  function exportDrums() {
     const conductor = [tempoEvent(drum.bpm), { tick: 0, bytes: [0xff, 0x58, 0x04, 4, 2, 24, 8] }];
     const name = `drums-${PRESETS[drum.preset].name}-${drum.feel}${drum.triplet ? '-triplet' : ''}-${drum.bpm}bpm.mid`;
-    saveFile(midiFile([conductor, track]), name.toLowerCase().replace(/[^a-z0-9.-]+/g, '-'));
+    saveFile(midiFile([conductor, drumTrack()]), fileName(name));
   }
 
   // ---------------------------------------------------------------------
@@ -1968,6 +2050,7 @@
     renderRolled();
     $('m-play').disabled = false;
     $('m-export').disabled = false;
+    $('m-export-all').disabled = false;
     roll.canvas.setAttribute('aria-label', `Piano roll: ${melody.notes.length} notes over ${melody.bars} bars, chords ${melody.chords.map((c) => c.name).join(', ')}`);
 
     if (mp.playing) {
@@ -2246,6 +2329,7 @@
     });
     $('m-reset').addEventListener('click', resetMelodyControls);
     $('m-export').addEventListener('click', exportMelody);
+    $('m-export-all').addEventListener('click', exportMelodyAndDrums);
     $('m-volume').addEventListener('input', (e) => {
       if (audio.melodyBus) audio.melodyBus.gain.value = Number(e.target.value);
     });
@@ -2307,6 +2391,23 @@
     $('d-volume').addEventListener('input', (e) => {
       if (audio.drumBus) audio.drumBus.gain.value = Number(e.target.value);
     });
+
+    // In the claude.ai viewer, plain downloads are blocked: hide the export
+    // buttons until its downloads capability answers.
+    if (window.claude && typeof window.claude.use === 'function') {
+      const exportButtons = ['m-export', 'm-export-all', 'd-export'].map($);
+      exportButtons.forEach((b) => {
+        b.hidden = true;
+      });
+      window.claude.use('downloads').then((d) => {
+        viewerDownloads = d;
+        if (d) {
+          exportButtons.forEach((b) => {
+            b.hidden = false;
+          });
+        }
+      }).catch(() => {});
+    }
 
     // Global transport
     $('master-volume').addEventListener('input', (e) => {
