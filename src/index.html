@@ -1,15 +1,16 @@
 <!doctype html>
-<html lang="">
+<html lang="en">
 
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width">
-  <title></title>
+  <title>Melody &amp; Drum Studio</title>
   <link rel="stylesheet" href="css/style.css">
-  <meta name="description" content="">
+  <link rel="stylesheet" href="css/app.css">
+  <meta name="description" content="Generate melodies from optional BPM, time signature, key, length, rhythm and genre settings, and program beats on a genre-preset drum machine.">
 
-  <meta property="og:title" content="">
-  <meta property="og:type" content="">
+  <meta property="og:title" content="Melody &amp; Drum Studio">
+  <meta property="og:type" content="website">
   <meta property="og:url" content="">
   <meta property="og:image" content="">
   <meta property="og:image:alt" content="">
@@ -19,13 +20,193 @@
   <link rel="apple-touch-icon" href="icon.png">
 
   <link rel="manifest" href="site.webmanifest">
-  <meta name="theme-color" content="#fafafa">
+  <meta name="theme-color" content="#101218">
 </head>
 
 <body>
 
-  <!-- Add your site or application content here -->
-  <p>Hello world! This is HTML5 Boilerplate.</p>
+  <header class="app-header">
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+        <rect x="3" y="14" width="4" height="12" rx="2"></rect>
+        <rect x="10" y="8" width="4" height="18" rx="2"></rect>
+        <rect x="17" y="4" width="4" height="22" rx="2"></rect>
+        <rect x="24" y="11" width="4" height="15" rx="2"></rect>
+      </svg>
+      <div>
+        <h1>Melody &amp; Drum Studio</h1>
+        <p class="tagline">Generate a melody, build a beat, play them together.</p>
+      </div>
+    </div>
+    <div class="transport">
+      <label class="slider-field">
+        <span>Master</span>
+        <input type="range" id="master-volume" min="0" max="1" step="0.01" value="0.8">
+      </label>
+      <button type="button" class="btn btn-primary" id="play-all">Play all</button>
+      <button type="button" class="btn" id="stop-all">Stop all</button>
+    </div>
+  </header>
+
+  <main class="layout">
+
+    <!-- Melody generator -->
+    <section class="panel panel-melody" aria-labelledby="melody-title">
+      <div class="panel-head">
+        <h2 id="melody-title">Melody generator</h2>
+        <p class="hint">Every option is optional. Anything left on <strong>Random</strong> is picked for you when you generate.</p>
+      </div>
+
+      <form id="melody-form" class="controls" autocomplete="off">
+        <div class="field" data-random-field>
+          <label for="m-genre">Genre</label>
+          <select id="m-genre" name="genre"></select>
+        </div>
+
+        <div class="field" data-random-field>
+          <label for="m-bpm">BPM</label>
+          <input type="number" id="m-bpm" name="bpm" min="30" max="300" step="1" placeholder="Random" inputmode="numeric">
+        </div>
+
+        <div class="field" data-random-field>
+          <span class="label" id="m-ts-label">Time signature</span>
+          <div class="inline-pair">
+            <input type="number" id="m-ts-num" name="tsNum" min="1" max="16" step="1" placeholder="?" inputmode="numeric" aria-labelledby="m-ts-label" aria-label="Beats per bar">
+            <span class="slash" aria-hidden="true">/</span>
+            <select id="m-ts-den" name="tsDen" aria-label="Beat unit">
+              <option value="">?</option>
+              <option value="2">2</option>
+              <option value="4">4</option>
+              <option value="8">8</option>
+              <option value="16">16</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field field-key" data-random-field>
+          <span class="label" id="m-key-label">Key signature</span>
+          <div class="inline-pair">
+            <select id="m-key-root" name="root" aria-label="Key root"></select>
+            <select id="m-key-mode" name="scale" aria-label="Scale or mode"></select>
+          </div>
+        </div>
+
+        <div class="field" data-random-field>
+          <label for="m-length">Length</label>
+          <select id="m-length" name="length">
+            <option value="">Random</option>
+            <option value="short">Short (4 bars)</option>
+            <option value="medium">Medium (8 bars)</option>
+            <option value="long">Long (16 bars)</option>
+          </select>
+        </div>
+
+        <div class="field" data-random-field>
+          <label for="m-rhythm">Rhythmic pattern</label>
+          <select id="m-rhythm" name="rhythm"></select>
+        </div>
+
+        <div class="field" data-random-field>
+          <label for="m-sound">Sound</label>
+          <select id="m-sound" name="sound"></select>
+        </div>
+      </form>
+
+      <div class="actions">
+        <button type="button" class="btn btn-primary" id="m-generate">Generate</button>
+        <button type="button" class="btn" id="m-play" disabled>Play</button>
+        <label class="switch"><input type="checkbox" id="m-loop" checked><span>Loop</span></label>
+        <label class="switch"><input type="checkbox" id="m-chords" checked><span>Backing chords</span></label>
+        <label class="slider-field">
+          <span>Volume</span>
+          <input type="range" id="m-volume" min="0" max="1" step="0.01" value="0.8">
+        </label>
+        <span class="spacer"></span>
+        <button type="button" class="btn btn-ghost" id="m-reset">Reset all to random</button>
+        <button type="button" class="btn btn-ghost" id="m-export" disabled>Export MIDI</button>
+      </div>
+
+      <div class="rolled" id="m-rolled" aria-live="polite">
+        <p class="rolled-empty">No melody yet. Press <strong>Generate</strong>.</p>
+      </div>
+
+      <div class="roll-wrap">
+        <canvas id="m-roll" class="piano-roll" role="img" aria-label="Piano roll of the generated melody"></canvas>
+      </div>
+    </section>
+
+    <!-- Drum machine -->
+    <section class="panel panel-drums" aria-labelledby="drums-title">
+      <div class="panel-head">
+        <h2 id="drums-title">Drum machine</h2>
+        <p class="hint">Pick a genre preset, then change the feel or switch to triplets. Click a step to cycle <em>off → hit → accent</em>. Click a drum name to hear it.</p>
+      </div>
+
+      <div class="controls">
+        <div class="field">
+          <label for="d-preset">Genre preset</label>
+          <select id="d-preset"></select>
+        </div>
+
+        <div class="field">
+          <label for="d-bpm">BPM</label>
+          <div class="inline-pair">
+            <input type="number" id="d-bpm" min="40" max="240" step="1" value="120" inputmode="numeric">
+            <input type="range" id="d-bpm-range" min="40" max="240" step="1" value="120" aria-label="BPM slider">
+          </div>
+        </div>
+
+        <fieldset class="field segmented-field">
+          <legend>Feel</legend>
+          <div class="segmented" role="radiogroup">
+            <label><input type="radio" name="d-feel" value="half"><span>Half time</span></label>
+            <label><input type="radio" name="d-feel" value="normal" checked><span>Normal</span></label>
+            <label><input type="radio" name="d-feel" value="double"><span>Double time</span></label>
+          </div>
+        </fieldset>
+
+        <div class="field">
+          <label for="d-kit">Kit</label>
+          <select id="d-kit"></select>
+        </div>
+
+        <div class="field">
+          <label for="d-swing">Swing <output id="d-swing-out" for="d-swing">0%</output></label>
+          <input type="range" id="d-swing" min="0" max="100" step="1" value="0">
+        </div>
+
+        <div class="field field-switches">
+          <label class="switch"><input type="checkbox" id="d-triplet"><span>Triplets</span></label>
+          <label class="switch"><input type="checkbox" id="d-humanize"><span>Humanize</span></label>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button type="button" class="btn btn-primary btn-drums" id="d-play">Play</button>
+        <button type="button" class="btn" id="d-sync">Match melody BPM</button>
+        <button type="button" class="btn" id="d-vary">Variation</button>
+        <button type="button" class="btn" id="d-clear">Clear</button>
+        <label class="slider-field">
+          <span>Volume</span>
+          <input type="range" id="d-volume" min="0" max="1" step="0.01" value="0.8">
+        </label>
+        <span class="spacer"></span>
+        <button type="button" class="btn btn-ghost" id="d-export">Export MIDI</button>
+      </div>
+
+      <p class="feel-info" id="d-feel-info" aria-live="polite"></p>
+
+      <div class="seq-wrap">
+        <div class="sequencer" id="d-grid"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="app-footer">
+    <p>Runs in the browser with the Web Audio API. Exported MIDI files open in any DAW.</p>
+  </footer>
+
   <script src="js/app.js"></script>
 
 </body>

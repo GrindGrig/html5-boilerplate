@@ -23,6 +23,7 @@ const expectedFilesInDistDir = [
   'css/', // for directories, a `/` character
   // should be included at the end
   'css/style.css',
+  'css/app.css',
 
   'favicon.ico',
 

@@ -1,3 +1,22 @@
+# Melody & Drum Studio
+
+This fork turns the boilerplate into a browser music tool (`src/index.html`,
+`src/js/app.js`, `src/css/app.css`). It has no dependencies and runs on the
+Web Audio API.
+
+- **Melody generator**: set BPM, time signature (any `n/2`, `n/4`, `n/8` or
+  `n/16`), key and scale, length (short/medium/long = 4/8/16 bars), rhythmic
+  pattern, genre and sound. Every option is optional. Anything left on
+  _Random_ is rolled from the genre's profile, and the result shows what was
+  rolled. Melodies come with chords and export to MIDI.
+- **Drum machine**: 12-voice step sequencer with genre presets, half-time,
+  normal and double-time feel, a triplet grid, swing, humanize, mute, and
+  MIDI export.
+
+Open `src/index.html` in a browser, or run `npm run build` and serve `dist/`.
+
+---
+
 # [HTML5 Boilerplate](https://html5boilerplate.com/)
 
 [![Build status](https://github.com/h5bp/html5-boilerplate/workflows/Build%20status/badge.svg)](https://github.com/h5bp/html5-boilerplate/actions?query=workflow%3A%22Build+status%22+branch%3Amain)
