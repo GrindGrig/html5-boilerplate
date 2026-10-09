@@ -39,7 +39,7 @@
       </svg>
       <div>
         <h1>Melody &amp; Drum Studio</h1>
-        <p class="tagline">Generate a melody, build a beat, play them together.</p>
+        <p class="tagline">Generate melodies, chord progressions and ensembles, build a beat, play them together.</p>
       </div>
     </div>
     <div class="transport">
@@ -57,9 +57,18 @@
     <!-- Melody generator -->
     <section class="panel panel-melody" aria-labelledby="melody-title">
       <div class="panel-head">
-        <h2 id="melody-title">Melody generator</h2>
+        <h2 id="melody-title">Music generator</h2>
         <p class="hint">Every option is optional. Anything left on <strong>Random</strong> is picked for you when you generate.</p>
       </div>
+
+      <fieldset class="mode-field">
+        <legend class="visually-hidden">Generator mode</legend>
+        <div class="segmented segmented-modes" role="radiogroup">
+          <label><input type="radio" name="m-mode" value="melody" checked><span>Melody</span></label>
+          <label><input type="radio" name="m-mode" value="chords"><span>Chord progression</span></label>
+          <label><input type="radio" name="m-mode" value="ensemble"><span>Ensemble</span></label>
+        </div>
+      </fieldset>
 
       <form id="melody-form" class="controls" autocomplete="off">
         <div class="field" data-random-field>
@@ -116,17 +125,27 @@
         </div>
 
         <fieldset class="field field-instrument" data-random-field>
-          <legend>Instrument</legend>
+          <legend id="m-inst-legend">Instrument</legend>
           <div class="instrument-picker" id="m-instrument" role="radiogroup" aria-describedby="m-inst-info"></div>
           <p class="inst-info" id="m-inst-info"></p>
         </fieldset>
+
+        <div class="field ens-only" hidden>
+          <label for="m-ens-chords">Chord instrument</label>
+          <select id="m-ens-chords" name="ensChords"></select>
+        </div>
+
+        <div class="field ens-only" hidden>
+          <label for="m-ens-bass">Bass instrument</label>
+          <select id="m-ens-bass" name="ensBass"></select>
+        </div>
       </form>
 
       <div class="actions">
         <button type="button" class="btn btn-primary" id="m-generate">Generate</button>
         <button type="button" class="btn" id="m-play" disabled>Play</button>
         <label class="switch"><input type="checkbox" id="m-loop" checked><span>Loop</span></label>
-        <label class="switch"><input type="checkbox" id="m-chords" checked><span>Backing chords</span></label>
+        <label class="switch"><input type="checkbox" id="m-chords" checked><span id="m-chords-label">Backing chords</span></label>
         <label class="slider-field">
           <span>Volume</span>
           <input type="range" id="m-volume" min="0" max="1" step="0.01" value="0.8">
@@ -139,13 +158,14 @@
       <p class="save-status" aria-live="polite"></p>
 
       <div class="rolled" id="m-rolled" aria-live="polite">
-        <p class="rolled-empty">No melody yet. Press <strong>Generate</strong>.</p>
+        <p class="rolled-empty">Nothing generated yet. Pick a mode and press <strong>Generate</strong>.</p>
       </div>
       <p class="lock-hint" id="m-lock-hint" hidden>Tap a setting to lock it. <strong>Generate</strong> re-rolls everything that isn't locked.</p>
 
       <div class="roll-wrap">
-        <canvas id="m-roll" class="piano-roll" role="img" aria-label="Piano roll of the generated melody"></canvas>
+        <canvas id="m-roll" class="piano-roll" role="img" aria-label="Piano roll of the generated song"></canvas>
       </div>
+      <div class="roll-legend" id="m-legend" hidden></div>
     </section>
 
     <!-- Drum machine -->

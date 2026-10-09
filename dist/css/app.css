@@ -468,6 +468,66 @@ input[type="range"] {
   display: none;
 }
 
+/* Also defined by the boilerplate's style.css; repeated here so the page
+   works without it. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (min-width: 641px) {
+  .field-key {
+    grid-column: span 2;
+  }
+}
+
+/* Generator modes
+   ========================================================================== */
+
+.mode-field {
+  margin: 0 0 16px;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.segmented-modes input:checked + span {
+  background: var(--melody);
+  color: #13101f;
+}
+
+.roll-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend-item i {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+.piano-roll.is-tall {
+  height: 360px;
+}
+
 /* Instrument picker
    ========================================================================== */
 
@@ -926,6 +986,16 @@ input[type="range"] {
 
   .piano-roll {
     height: 240px;
+  }
+
+  .piano-roll.is-tall {
+    height: 320px;
+  }
+
+  .segmented-modes span {
+    white-space: normal;
+    text-align: center;
+    line-height: 1.15;
   }
 
   .chip-lock {

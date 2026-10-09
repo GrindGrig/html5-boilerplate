@@ -792,14 +792,28 @@
     const root = roll('root', input.root, () => randInt(0, 11));
     const scale = roll('scale', input.scale, () => weighted(blendWeights(g.scales, md.scales)));
     const length = roll('length', input.length, () => pick(Object.keys(LENGTHS)));
-    const instrument = roll('instrument', input.instrument, () => weighted(blendWeights(g.instruments, md.instruments.map((k) => [k, 3]))));
-    const inst = INSTRUMENTS[instrument];
+    // The instrument picker sets the lead in Melody and Ensemble modes and
+    // the chord instrument in Chord progression mode. Every role is
+    // resolved either way, so switching modes later can reuse the song.
+    const mode = input.mode || 'melody';
+    const leadPick = () => weighted(blendWeights(g.instruments, md.instruments.map((k) => [k, 3])));
+    let instrument;
+    let chordInstrument;
+    if (mode === 'chords') {
+      chordInstrument = roll('instrument', input.instrument, () => pickChordInstrument(g, md));
+      instrument = leadPick();
+    } else {
+      instrument = roll('instrument', input.instrument, leadPick);
+      chordInstrument = input.chordInstrument || pickChordInstrument(g, md, instrument);
+    }
+    const bassInstrument = input.bassInstrument || (genre === 'classical' ? 'cello' : 'bass');
+    const inst = INSTRUMENTS[mode === 'chords' ? chordInstrument : instrument];
     const rhythm = roll('rhythm', input.rhythm, () => {
       const base = blendWeights(g.rhythms, md.rhythms);
       return weighted(inst.rhythms ? blendWeights(base, inst.rhythms) : base);
     });
 
-    return { genre, mood, bpm, num, den, root, scale, length, rhythm, instrument, rolled };
+    return { mode, genre, mood, bpm, num, den, root, scale, length, rhythm, instrument, chordInstrument, bassInstrument, rolled };
   }
 
   function resolveSwing(settings, groups) {
@@ -914,7 +928,7 @@
       });
     });
 
-    return Object.assign(s, {
+    const m = Object.assign(s, {
       notes,
       chords,
       groups,
@@ -924,6 +938,200 @@
       swing: resolveSwing(s, groups),
       sevenths: !!g.sevenths,
     });
+    buildParts(m);
+    return m;
+  }
+
+  // ---------------------------------------------------------------------
+  // | Arrangement: chord and bass parts                                 |
+  // ---------------------------------------------------------------------
+
+  // Instruments that can play a chord at once. Single-note instruments
+  // play the chords as broken chords instead.
+  const POLY = new Set(['piano', 'epiano', 'guitar', 'eguitar', 'marimba', 'synth', 'pad', 'bells']);
+
+  // How the rhythmic pattern setting translates to chord comping and bass.
+  const COMP_STYLE = {
+    straight: 'straight', syncopated: 'syncopated', dotted: 'dotted', swing: 'swing', triplet: 'triplet',
+    sparse: 'sparse', dense: 'straight', arpeggio: 'arpeggio', offbeat: 'offbeat', tresillo: 'tresillo',
+  };
+  const BASS_STYLE = {
+    straight: 'straight', syncopated: 'syncopated', dotted: 'dotted', swing: 'walking', triplet: 'straight',
+    sparse: 'sparse', dense: 'straight', arpeggio: 'straight', offbeat: 'syncopated', tresillo: 'tresillo',
+  };
+
+  function pickChordInstrument(g, md, avoid) {
+    const entries = blendWeights(g.instruments, md.instruments.map((k) => [k, 3]))
+      .filter(([k]) => POLY.has(k) && k !== avoid);
+    return entries.length ? weighted(entries) : 'piano';
+  }
+
+  // Comping and bass rhythms are rolled once per song so the groove stays
+  // put when instruments or modes change.
+  function ensureGroove(m) {
+    if (m.groove) return;
+    const strongSet = new Set(groupStarts(m.groups));
+    const bar = (pattern, keepDownbeat) => {
+      const ctx = { groups: m.groups, barTicks: m.barTicks, strongSet, pattern, restProb: 0.04, arpUnit: 24 };
+      const items = makeBarRhythm(ctx);
+      if (keepDownbeat) items[0].rest = false;
+      return items;
+    };
+    const comp = COMP_STYLE[m.rhythm] === 'arpeggio' ? 'straight' : COMP_STYLE[m.rhythm];
+    const compA = bar(comp, comp !== 'offbeat');
+    const bassStyle = BASS_STYLE[m.rhythm] === 'walking' ? 'straight' : BASS_STYLE[m.rhythm];
+    const bassA = bar(bassStyle, true);
+    const tripletOk = m.groups.every((len) => len === 48);
+    m.groove = {
+      compA,
+      compB: chance(0.5) ? compA : ensureNote(varyRhythm(compA)),
+      bassA,
+      bassB: chance(0.5) ? bassA : varyRhythm(bassA),
+      arpUnit: m.rhythm === 'dense' ? 12 : (m.rhythm === 'triplet' && tripletOk ? 16 : 24),
+    };
+    m.groove.compB[0].rest = comp === 'offbeat';
+    m.groove.bassB[0].rest = false;
+  }
+
+  // Picks the inversion and octave closest to the previous chord, inside
+  // the instrument's chord range.
+  function voiceChord(pcs, prev, lo, hi) {
+    let best = null;
+    let bestScore = Infinity;
+    for (let inv = 0; inv < pcs.length; inv++) {
+      const order = pcs.slice(inv).concat(pcs.slice(0, inv));
+      for (let octave = 0; octave < 2; octave++) {
+        const notes = [lo + mod(order[0] - lo, 12) + octave * 12];
+        for (let i = 1; i < order.length; i++) {
+          let n = notes[i - 1] + 1;
+          while (mod(n, 12) !== order[i]) n++;
+          notes.push(n);
+        }
+        if (notes[notes.length - 1] > hi && best) continue;
+        const score = prev ?
+          notes.reduce((sum, n, i) => sum + Math.abs(n - prev[Math.min(i, prev.length - 1)]), 0) :
+          Math.abs(notes.reduce((a, b) => a + b, 0) / notes.length - (lo + hi) / 2);
+        if (score < bestScore || (best && best[best.length - 1] > hi)) {
+          best = notes;
+          bestScore = score;
+        }
+      }
+    }
+    return best;
+  }
+
+  function chordPart(m) {
+    ensureGroove(m);
+    const key = m.chordInstrument;
+    const [ilo, ihi] = INSTRUMENTS[key].range;
+    const lo = clamp(50, ilo, ihi - 16);
+    const hi = Math.min(ihi, Math.max(lo + 17, 79));
+    const strong = new Set(groupStarts(m.groups));
+    const broken = !POLY.has(key) || COMP_STYLE[m.rhythm] === 'arpeggio';
+    const notes = [];
+    let prev = null;
+    m.chords.forEach((c, bar) => {
+      const voicing = voiceChord(c.pcs, prev, lo, hi);
+      prev = voicing;
+      const base = bar * m.barTicks;
+      const last = bar === m.chords.length - 1;
+      if (broken && !(last && POLY.has(key))) {
+        const top = voicing[0] + 12 <= ihi ? [voicing[0] + 12] : [];
+        const up = voicing.concat(top);
+        const cycle = up.concat(up.slice(1, -1).reverse());
+        const unit = m.groove.arpUnit;
+        for (let t = 0, i = 0; t < m.barTicks; t += unit, i++) {
+          const dur = last && t + unit >= m.barTicks ? m.barTicks - t : Math.min(unit, m.barTicks - t);
+          notes.push({ tick: base + t, dur, midi: cycle[i % cycle.length], vel: strong.has(t) ? 0.82 : 0.64 });
+        }
+        return;
+      }
+      const rhythm = last ? [{ start: 0, dur: m.barTicks, rest: false }] : (bar % 2 ? m.groove.compB : m.groove.compA);
+      rhythm.forEach((it) => {
+        if (it.rest) return;
+        voicing.forEach((midi) => {
+          notes.push({ tick: base + it.start, dur: it.dur, midi, vel: strong.has(it.start) ? 0.74 : 0.62 });
+        });
+      });
+    });
+    return notes;
+  }
+
+  function bassPart(m) {
+    ensureGroove(m);
+    const [low, high] = INSTRUMENTS[m.bassInstrument].range;
+    const style = BASS_STYLE[m.rhythm];
+    const strong = new Set(groupStarts(m.groups));
+    const rootOf = (pc) => {
+      let n = low + mod(pc - low, 12);
+      if (n < low + 4) n += 12;
+      return n;
+    };
+    const fit = (n) => {
+      while (n > high) n -= 12;
+      while (n < low) n += 12;
+      return n;
+    };
+    const notes = [];
+    m.chords.forEach((c, bar) => {
+      const base = bar * m.barTicks;
+      const root = rootOf(c.pcs[0]);
+      const third = root + mod(c.pcs[1] - c.pcs[0], 12);
+      const fifth = root + mod(c.pcs[2] - c.pcs[0], 12);
+      const next = m.chords[bar + 1];
+      const nextRoot = next ? rootOf(next.pcs[0]) : null;
+      let rhythm;
+      if (!next) {
+        rhythm = [{ start: 0, dur: m.barTicks, rest: false }];
+      } else if (style === 'walking') {
+        rhythm = [];
+        let pos = 0;
+        m.groups.forEach((len) => {
+          const step = len % 48 === 0 ? 48 : len;
+          for (let t = 0; t < len; t += step) rhythm.push({ start: pos + t, dur: step, rest: false });
+          pos += len;
+        });
+      } else {
+        rhythm = bar % 2 ? m.groove.bassB : m.groove.bassA;
+      }
+      const played = rhythm.filter((it) => !it.rest);
+      played.forEach((it, i) => {
+        let midi;
+        if (it.start === 0) midi = root;
+        else if (i === played.length - 1 && nextRoot !== null && nextRoot !== root && chance(style === 'walking' ? 0.8 : 0.35)) midi = nextRoot + (nextRoot > root ? -1 : 1);
+        else if (style === 'walking') midi = pick([third, fifth, root + 12]);
+        else midi = strong.has(it.start) ? pick([fifth, root, root + 12]) : pick([root, root, fifth]);
+        notes.push({ tick: base + it.start, dur: it.dur, midi: fit(midi), vel: it.start === 0 ? 0.9 : 0.74 });
+      });
+    });
+    return notes;
+  }
+
+  // The parts that play (and export) in the song's current mode.
+  function buildParts(m) {
+    m.parts = [];
+    if (m.mode !== 'chords') m.parts.push({ role: 'lead', instrument: m.instrument, notes: m.notes });
+    if (m.mode !== 'melody') {
+      m.parts.push({ role: 'chords', instrument: m.chordInstrument, notes: chordPart(m) });
+      m.parts.push({ role: 'bass', instrument: m.bassInstrument, notes: bassPart(m) });
+    }
+  }
+
+  const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII'];
+  const MAJOR_STEPS = [0, 2, 4, 5, 7, 9, 11];
+
+  // Roman numeral relative to the major scale on the same tonic (so a
+  // flat seventh chord in Mixolydian reads bVII).
+  function romanNumeral(m, c) {
+    const d = mod(c.deg, 7);
+    const diff = scaleHarmony(m.scale)[d] - MAJOR_STEPS[d];
+    const third = mod(c.pcs[1] - c.pcs[0], 12);
+    const fifth = mod(c.pcs[2] - c.pcs[0], 12);
+    let numeral = third === 3 ? ROMAN[d].toLowerCase() : ROMAN[d];
+    if (fifth === 6) numeral += c.pcs.length > 3 && mod(c.pcs[3] - c.pcs[0], 12) === 10 ? 'ø' : '°';
+    else if (fifth === 8) numeral += '+';
+    if (c.pcs.length > 3 && fifth !== 6) numeral += mod(c.pcs[3] - c.pcs[0], 12) === 11 ? 'maj7' : '7';
+    return (diff < 0 ? 'b' : diff > 0 ? '#' : '') + numeral;
   }
 
   // Maps a straight tick position to its swung position.
@@ -1663,16 +1871,29 @@
     setTimeout(() => node.disconnect(), 200);
   }
 
+  // Chord parts stack several voices, so each sounds softer.
+  const ROLE_LEVEL = { lead: 1, chords: 0.55, bass: 0.9 };
+
   function melodyEvents(m) {
     const spt = 60 / (m.bpm * TPQ);
-    const events = m.notes.map((n) => {
-      const start = swingTick(n.tick, m.swing) * spt;
-      const end = swingTick(n.tick + n.dur, m.swing) * spt;
-      return { type: 'note', time: start, dur: (end - start) * INSTRUMENTS[m.instrument].gate * 0.97, midi: n.midi, vel: n.vel };
+    const events = [];
+    m.parts.forEach((part) => {
+      const inst = INSTRUMENTS[part.instrument];
+      part.notes.forEach((n) => {
+        const start = swingTick(n.tick, m.swing) * spt;
+        const end = swingTick(n.tick + n.dur, m.swing) * spt;
+        events.push({
+          type: 'note', role: part.role, synth: inst.synth, time: start,
+          dur: (end - start) * inst.gate * 0.97, midi: n.midi, vel: n.vel * ROLE_LEVEL[part.role],
+        });
+      });
     });
-    m.chords.forEach((c) => {
-      events.push({ type: 'chord', time: c.bar * m.barTicks * spt, dur: m.barTicks * spt, chord: c });
-    });
+    // Melody mode keeps its simple backing chords (toggled by the switch).
+    if (m.mode === 'melody') {
+      m.chords.forEach((c) => {
+        events.push({ type: 'chord', time: c.bar * m.barTicks * spt, dur: m.barTicks * spt, chord: c });
+      });
+    }
     events.sort((a, b) => a.time - b.time);
     return { events, loopDur: m.totalTicks * spt, barDur: m.barTicks * spt };
   }
@@ -1695,9 +1916,6 @@
     stopTimerIfIdle();
   }
 
-  function currentSound() {
-    return INSTRUMENTS[melody.instrument].synth;
-  }
 
   function scheduleMelody(until) {
     while (mp.playing) {
@@ -1714,7 +1932,10 @@
         mp.idx++;
         continue;
       }
-      if (ev.type === 'note') playTone(ev.midi, t, ev.dur, ev.vel, currentSound(), mp.out);
+      // In Chord progression mode the switch turns the bass line on or off.
+      if (ev.type === 'note') {
+        if (!(ev.role === 'bass' && melody.mode === 'chords' && !$('m-chords').checked)) playTone(ev.midi, t, ev.dur, ev.vel, ev.synth, mp.out);
+      }
       else if ($('m-chords').checked) playChord(ev.chord, t, ev.dur, mp.out, melody.instrument !== 'bass');
       mp.idx++;
     }
@@ -1938,29 +2159,40 @@
       { tick: 0, bytes: [0xff, 0x59, 0x02, sf & 255, scale.minor ? 1 : 0] },
     ];
 
-    const inst = INSTRUMENTS[m.instrument];
-    let lead = [
-      { tick: 0, bytes: textEvent(0x03, `Melody - ${inst.name}`) },
-      { tick: 0, bytes: [0xc0, inst.program] },
-    ];
-    m.notes.forEach((n) => {
-      const start = at(n.tick);
-      lead = lead.concat(noteEvents(0, start, Math.round((at(n.tick + n.dur) - start) * 0.95), n.midi, Math.round(n.vel * 110)));
-    });
-
-    let chords = [{ tick: 0, bytes: textEvent(0x03, 'Chords') }];
-    m.chords.forEach((c) => {
-      const start = c.bar * m.barTicks * k;
-      const dur = m.barTicks * k - 10;
-      c.pcs.forEach((pc) => {
-        let note = 48 + pc;
-        while (note < 48 + c.pcs[0]) note += 12;
-        chords = chords.concat(noteEvents(1, start, dur, note, 70));
+    const ROLE_NAMES = { lead: 'Melody', chords: 'Chords', bass: 'Bass' };
+    const CHANNELS = { lead: 0, chords: 1, bass: 2 };
+    const tracks = m.parts.map((part) => {
+      const inst = INSTRUMENTS[part.instrument];
+      const ch = CHANNELS[part.role];
+      let track = [
+        { tick: 0, bytes: textEvent(0x03, `${ROLE_NAMES[part.role]} - ${inst.name}`) },
+        { tick: 0, bytes: [0xc0 | ch, inst.program] },
+      ];
+      part.notes.forEach((n) => {
+        const start = at(n.tick);
+        const vel = Math.round(n.vel * (part.role === 'chords' ? 90 : 110));
+        track = track.concat(noteEvents(ch, start, Math.max(1, Math.round((at(n.tick + n.dur) - start) * inst.gate * 0.97)), n.midi, vel));
       });
-      if (m.instrument !== 'bass') chords = chords.concat(noteEvents(1, start, dur, 36 + c.pcs[0], 85));
+      return track;
     });
 
-    return { conductor, lead, chords, length: m.totalTicks * k };
+    // Melody mode exports its backing chords too.
+    if (m.mode === 'melody') {
+      let chords = [{ tick: 0, bytes: textEvent(0x03, 'Backing chords') }];
+      m.chords.forEach((c) => {
+        const start = c.bar * m.barTicks * k;
+        const dur = m.barTicks * k - 10;
+        c.pcs.forEach((pc) => {
+          let note = 48 + pc;
+          while (note < 48 + c.pcs[0]) note += 12;
+          chords = chords.concat(noteEvents(1, start, dur, note, 70));
+        });
+        if (m.instrument !== 'bass') chords = chords.concat(noteEvents(1, start, dur, 36 + c.pcs[0], 85));
+      });
+      tracks.push(chords);
+    }
+
+    return { conductor, tracks, length: m.totalTicks * k };
   }
 
   // The drum pattern on channel 10, looped until `length` ticks
@@ -1987,13 +2219,15 @@
   }
 
   function melodyName(m, suffix) {
-    return fileName(`melody-${GENRES[m.genre].name}-${INSTRUMENTS[m.instrument].name}-${MOODS[m.mood].name}-${NOTE_NAMES[m.root]}-${m.scale}-${m.bpm}bpm${suffix}.mid`);
+    const main = m.mode === 'chords' ? m.chordInstrument : m.instrument;
+    const prefix = { melody: 'melody', chords: 'chords', ensemble: 'ensemble' }[m.mode];
+    return fileName(`${prefix}-${GENRES[m.genre].name}-${INSTRUMENTS[main].name}-${MOODS[m.mood].name}-${NOTE_NAMES[m.root]}-${m.scale}-${m.bpm}bpm${suffix}.mid`);
   }
 
   function exportMelody() {
     if (!melody) return;
     const t = melodyTracks(melody);
-    saveFile(midiFile([t.conductor, t.lead, t.chords]), melodyName(melody, ''));
+    saveFile(midiFile([t.conductor].concat(t.tracks)), melodyName(melody, ''));
   }
 
   // Melody, chords and drums in one file, at the melody's tempo and length
@@ -2001,7 +2235,7 @@
   function exportMelodyAndDrums() {
     if (!melody) return;
     const t = melodyTracks(melody);
-    saveFile(midiFile([t.conductor, t.lead, t.chords, drumTrack(t.length)]), melodyName(melody, '-with-drums'));
+    saveFile(midiFile([t.conductor].concat(t.tracks, [drumTrack(t.length)])), melodyName(melody, '-with-drums'));
   }
 
   function exportDrums() {
@@ -2017,6 +2251,7 @@
   const roll = { canvas: null, ctx: null, cache: null, w: 0, h: 0, touchedAt: 0 };
   const BLACK = new Set([1, 3, 6, 8, 10]);
   const CHORD_LANE = 22;
+  const ROLE_COLORS = { lead: '157, 140, 255', chords: '62, 207, 178', bass: '90, 169, 255' };
 
   // Narrow screens scroll the roll sideways instead of squashing the notes.
   const ROLL_PX_PER_QUARTER = 16;
@@ -2038,7 +2273,8 @@
 
   function rollLayout() {
     const m = melody;
-    const pitches = m.notes.map((n) => n.midi);
+    const pitches = [];
+    m.parts.forEach((part) => part.notes.forEach((n) => pitches.push(n.midi)));
     const minP = Math.min.apply(null, pitches) - 2;
     const maxP = Math.max.apply(null, pitches) + 2;
     return { minP, maxP, rowH: (roll.h - CHORD_LANE) / (maxP - minP + 1), xPerTick: roll.w / m.totalTicks };
@@ -2095,17 +2331,21 @@
       }
     });
 
-    // Notes
-    m.notes.forEach((n) => {
-      const x = n.tick * L.xPerTick;
-      const w = Math.max(2, n.dur * L.xPerTick - 1.5);
-      const top = y(n.midi) + 1;
-      const h = Math.max(2, L.rowH - 2);
-      g.fillStyle = `rgba(157, 140, 255, ${0.55 + n.vel * 0.45})`;
-      g.beginPath();
-      if (g.roundRect) g.roundRect(x, top, w, h, Math.min(3, h / 2));
-      else g.rect(x, top, w, h);
-      g.fill();
+    // Notes, lead drawn last so it stays on top
+    const order = { chords: 0, bass: 1, lead: 2 };
+    m.parts.slice().sort((a, b) => order[a.role] - order[b.role]).forEach((part) => {
+      const rgb = ROLE_COLORS[part.role];
+      part.notes.forEach((n) => {
+        const x = n.tick * L.xPerTick;
+        const w = Math.max(2, n.dur * L.xPerTick - 1.5);
+        const top = y(n.midi) + 1;
+        const h = Math.max(2, L.rowH - 2);
+        g.fillStyle = `rgba(${rgb}, ${0.55 + n.vel * 0.45})`;
+        g.beginPath();
+        if (g.roundRect) g.roundRect(x, top, w, h, Math.min(3, h / 2));
+        else g.rect(x, top, w, h);
+        g.fill();
+      });
     });
     roll.cache = off;
   }
@@ -2211,8 +2451,16 @@
       length: $('m-length').value,
       rhythm: $('m-rhythm').value,
       instrument: fieldValue('m-instrument'),
+      mode: genMode,
+      chordInstrument: genMode === 'ensemble' ? $('m-ens-chords').value : '',
+      bassInstrument: genMode === 'ensemble' ? $('m-ens-bass').value : '',
     };
   }
+
+  // Generator mode, and the instrument picker's value remembered per mode
+  // (it means the lead in Melody/Ensemble and the chords in Chord progression).
+  let genMode = 'melody';
+  const pickerByMode = { melody: '', chords: '', ensemble: '' };
 
   // The instrument picker is a radio group; these let the rest of the form
   // code treat it like a single field.
@@ -2268,11 +2516,32 @@
       'Random picks an instrument that suits the genre and mood. Every instrument gets melodies written for its range and style.';
   }
 
-  // Picking an instrument after generating moves the current melody into
-  // that instrument's range (whole octaves, folding any stray notes) and
-  // switches the sound. Generate writes a new melody in its style.
-  function revoiceMelody(key) {
-    if (!melody || !INSTRUMENTS[key] || key === melody.instrument) return;
+  // Re-plays the current song after its parts changed, swapping in on the
+  // next downbeat if it is playing.
+  function refreshSong() {
+    buildParts(melody);
+    sizeRoll();
+    renderRolled();
+    renderLegend();
+    if (mp.playing) {
+      const drumBeat = nextDrumDownbeat();
+      startMelody(drumBeat !== null ? drumBeat : nextMelodyBar(audio.ctx.currentTime + 0.05));
+    }
+  }
+
+  // Picking an instrument after generating applies it to the current song.
+  // For the lead, the melody moves into the new range (whole octaves,
+  // folding any stray notes); chords are re-voiced for the new instrument.
+  // Generate writes a new song in the instrument's style.
+  function onInstrumentPicked(key) {
+    if (!melody || !INSTRUMENTS[key]) return;
+    if (genMode === 'chords') {
+      if (key === melody.chordInstrument) return;
+      melody.chordInstrument = key;
+      refreshSong();
+      return;
+    }
+    if (key === melody.instrument) return;
     const [low, high] = INSTRUMENTS[key].range;
     let best = 0;
     let bestScore = Infinity;
@@ -2292,13 +2561,71 @@
       n.midi = m;
     });
     melody.instrument = key;
-    melody.rolled.instrument = false;
-    sizeRoll();
-    renderRolled();
-    if (mp.playing) {
-      const drumBeat = nextDrumDownbeat();
-      startMelody(drumBeat !== null ? drumBeat : nextMelodyBar(audio.ctx.currentTime + 0.05));
+    refreshSong();
+  }
+
+  function onEnsemblePartPicked() {
+    if (!melody) return;
+    const chordKey = $('m-ens-chords').value;
+    const bassKey = $('m-ens-bass').value;
+    if (chordKey) melody.chordInstrument = chordKey;
+    if (bassKey) melody.bassInstrument = bassKey;
+    if (chordKey || bassKey) refreshSong();
+  }
+
+  const MODE_TEXT = {
+    melody: { legend: 'Instrument', backing: 'Backing chords', download: 'melody' },
+    chords: { legend: 'Chord instrument', backing: 'Bass line', download: 'chords' },
+    ensemble: { legend: 'Lead instrument', backing: '', download: 'ensemble' },
+  };
+
+  function applyModeUi() {
+    const text = MODE_TEXT[genMode];
+    $('m-inst-legend').textContent = text.legend;
+    $('m-chords-label').textContent = text.backing;
+    $('m-chords').closest('.switch').hidden = !text.backing;
+    document.querySelectorAll('.ens-only').forEach((el) => {
+      el.hidden = genMode !== 'ensemble';
+    });
+    $('m-export').textContent = `Download ${text.download} MIDI`;
+    $('m-export-all').textContent = `Download ${text.download} + drums MIDI`;
+    $('m-roll').classList.toggle('is-tall', genMode !== 'melody');
+    updateInstrumentInfo();
+  }
+
+  // Switching modes keeps the current song: the same chords and melody are
+  // re-arranged for the new mode.
+  function setMode(mode) {
+    if (mode === genMode) return;
+    pickerByMode[genMode] = fieldValue('m-instrument');
+    genMode = mode;
+    setFieldValue('m-instrument', pickerByMode[mode]);
+    applyModeUi();
+    updateRandomBadges();
+    if (melody) {
+      melody.mode = mode;
+      refreshSong();
     }
+  }
+
+  function renderLegend() {
+    const box = $('m-legend');
+    box.innerHTML = '';
+    if (!melody || melody.parts.length < 2) {
+      box.hidden = true;
+      return;
+    }
+    box.hidden = false;
+    const names = { lead: 'Lead', chords: 'Chords', bass: 'Bass' };
+    melody.parts.forEach((part) => {
+      const item = document.createElement('span');
+      item.className = 'legend-item';
+      const dot = document.createElement('i');
+      dot.style.background = `rgb(${ROLE_COLORS[part.role]})`;
+      item.appendChild(dot);
+      item.appendChild(document.createTextNode(`${names[part.role]} · ${INSTRUMENTS[part.instrument].name}`));
+      box.appendChild(item);
+    });
   }
 
   function updateRandomBadges() {
@@ -2324,7 +2651,9 @@
       { label: 'Scale', value: SCALES[m.scale].name, fields: { 'm-key-mode': m.scale } },
       { label: 'Length', value: `${m.bars} bars · ${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`, fields: { 'm-length': m.length } },
       { label: 'Rhythm', value: RHYTHMS[m.rhythm] + (m.swing ? ' (swung)' : ''), fields: { 'm-rhythm': m.rhythm } },
-      { label: 'Instrument', value: INSTRUMENTS[m.instrument].name, fields: { 'm-instrument': m.instrument } },
+      m.mode === 'chords' ?
+        { label: 'Chord instrument', value: INSTRUMENTS[m.chordInstrument].name, fields: { 'm-instrument': m.chordInstrument } } :
+        { label: m.mode === 'ensemble' ? 'Lead' : 'Instrument', value: INSTRUMENTS[m.instrument].name, fields: { 'm-instrument': m.instrument } },
     ];
   }
 
@@ -2357,13 +2686,24 @@
       box.appendChild(el);
     });
 
-    const chords = document.createElement('span');
-    chords.className = 'chip';
-    const b = document.createElement('b');
-    b.textContent = 'Chords';
-    chords.appendChild(b);
-    chords.appendChild(document.createTextNode(melody.chords.slice(0, Math.min(4, melody.chords.length)).map((c) => c.name).join(' – ')));
-    box.appendChild(chords);
+    const info = (label, text) => {
+      const chip = document.createElement('span');
+      chip.className = 'chip';
+      const b = document.createElement('b');
+      b.textContent = label;
+      chip.appendChild(b);
+      chip.appendChild(document.createTextNode(text));
+      box.appendChild(chip);
+    };
+    const firstBars = melody.chords.slice(0, Math.min(4, melody.chords.length));
+    if (melody.mode !== 'melody') info('Progression', firstBars.map((c) => romanNumeral(melody, c)).join(' – '));
+    info('Chords', firstBars.map((c) => c.name).join(' – '));
+    if (melody.mode === 'ensemble') {
+      info('Chords on', INSTRUMENTS[melody.chordInstrument].name);
+      info('Bass on', INSTRUMENTS[melody.bassInstrument].name);
+    } else if (melody.mode === 'chords') {
+      info('Bass on', INSTRUMENTS[melody.bassInstrument].name);
+    }
     $('m-lock-hint').hidden = false;
   }
 
@@ -2372,10 +2712,11 @@
     roll.canvas.parentElement.scrollLeft = 0;
     sizeRoll();
     renderRolled();
+    renderLegend();
     $('m-play').disabled = false;
     $('m-export').disabled = false;
     $('m-export-all').disabled = false;
-    roll.canvas.setAttribute('aria-label', `Piano roll: ${melody.notes.length} notes over ${melody.bars} bars, chords ${melody.chords.map((c) => c.name).join(', ')}`);
+    roll.canvas.setAttribute('aria-label', `Piano roll: ${melody.parts.map((p) => p.role).join(', ')} over ${melody.bars} bars, chords ${melody.chords.map((c) => c.name).join(', ')}`);
 
     if (mp.playing) {
       // Swap the new melody in on the next downbeat.
@@ -2601,6 +2942,12 @@
     fillSelect($('m-key-mode'), Object.keys(SCALES).map((k) => [k, SCALES[k].name]), 'Random scale');
     fillSelect($('m-rhythm'), Object.keys(RHYTHMS).map((k) => [k, RHYTHMS[k]]), 'Random');
     buildInstrumentPicker();
+    fillSelect($('m-ens-chords'), Object.keys(INSTRUMENTS).map((k) => [k, INSTRUMENTS[k].name]), 'Auto (from genre)');
+    fillSelect($('m-ens-bass'), [['bass', 'Bass'], ['cello', 'Cello'], ['synth', 'Synth lead'], ['pad', 'Synth pad'], ['piano', 'Piano']], 'Auto (from genre)');
+    document.querySelectorAll('input[name="m-mode"]').forEach((radio) => {
+      radio.addEventListener('change', () => setMode(radio.value));
+    });
+    applyModeUi();
     fillSelect($('d-preset'), Object.keys(PRESETS).map((k) => [k, PRESETS[k].name]));
     fillSelect($('d-kit'), Object.keys(KITS).map((k) => [k, KITS[k].name]));
 
@@ -2635,7 +2982,9 @@
     form.addEventListener('change', (e) => {
       if (e.target.name === 'instrument') {
         updateInstrumentInfo();
-        revoiceMelody(e.target.value);
+        onInstrumentPicked(e.target.value);
+      } else if (e.target.id === 'm-ens-chords' || e.target.id === 'm-ens-bass') {
+        onEnsemblePartPicked();
       }
       updateRandomBadges();
       renderRolled();

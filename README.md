@@ -4,7 +4,7 @@ This fork turns the boilerplate into a browser music tool (`src/index.html`,
 `src/js/app.js`, `src/css/app.css`). It has no dependencies and runs on the
 Web Audio API.
 
-- **Melody generator**: set BPM, time signature (any `n/2`, `n/4`, `n/8` or
+- **Music generator**: set BPM, time signature (any `n/2`, `n/4`, `n/8` or
   `n/16`), key and scale, length (short/medium/long = 4/8/16 bars), rhythmic
   pattern, genre, mood and instrument. Every option is optional. Each of the 14
   instruments has its own sound, range, phrasing and rhythm preferences. Anything left on
@@ -12,6 +12,10 @@ Web Audio API.
   rolled. Tap a result to lock it; Generate then re-rolls only the
   unlocked settings. Melodies come with chords and download as MIDI, either on their own or
   together with the drum pattern in one file.
+- **Modes**: Melody, Chord progression (voice-led chords with a comping
+  rhythm and bass line, shown with Roman numerals) and Ensemble (lead, chords
+  and bass on separate instruments). Switching modes re-arranges the current
+  song, and MIDI downloads put each part on its own track.
 - **Drum machine**: 12-voice step sequencer with genre presets, half-time,
   normal and double-time feel, a triplet grid, swing, humanize, mute, and
   MIDI export.
