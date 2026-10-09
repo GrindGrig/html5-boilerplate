@@ -745,17 +745,22 @@
   // | Melody generation                                                 |
   // ---------------------------------------------------------------------
 
+  // Random picks for a half-set time signature. Common meters are the most
+  // likely, but odd and long ones come up too.
   function numeratorFor(den) {
-    if (den === 2) return pick([2, 3, 4]);
-    if (den === 4) return weighted([[4, 8], [3, 3], [2, 1], [5, 1], [6, 1], [7, 1]]);
-    if (den === 8) return weighted([[6, 5], [12, 2], [9, 2], [7, 2], [5, 2], [3, 1]]);
-    return weighted([[7, 1], [9, 1], [11, 1], [5, 1], [12, 1], [15, 1]]);
+    if (den === 1) return pick([1, 2, 3, 4]);
+    if (den === 2) return weighted([[2, 4], [3, 3], [4, 2], [5, 1], [6, 1]]);
+    if (den === 4) return weighted([[4, 8], [3, 3], [2, 1], [5, 1], [6, 1], [7, 1], [9, 0.5], [11, 0.5]]);
+    if (den === 8) return weighted([[6, 5], [12, 2], [9, 2], [7, 2], [5, 2], [3, 1], [11, 1], [13, 0.5], [15, 0.5]]);
+    if (den === 16) return weighted([[7, 1], [9, 1], [11, 1], [5, 1], [12, 1], [13, 1], [15, 1], [17, 0.5]]);
+    return weighted([[12, 1], [16, 1], [24, 1], [15, 1], [21, 1]]);
   }
 
   function denominatorFor(num) {
-    if ([6, 9, 12].includes(num)) return weighted([[8, 4], [4, 1]]);
-    if ([5, 7, 11, 13, 15].includes(num)) return weighted([[8, 3], [4, 2], [16, 1]]);
+    if (num % 3 === 0 && num > 3) return weighted([[8, 4], [4, 1], [16, 1]]);
+    if (num % 2 === 1 && num > 3) return weighted([[8, 3], [4, 2], [16, 1]]);
     if (num === 2) return weighted([[4, 3], [2, 2]]);
+    if (num > 16) return weighted([[8, 2], [16, 2], [4, 1]]);
     return weighted([[4, 6], [8, 1], [2, 1]]);
   }
 
@@ -779,7 +784,13 @@
     let num = input.tsNum;
     let den = input.tsDen;
     if (!num && !den) {
-      [num, den] = weighted(g.meters).split('/').map(Number);
+      // Mostly the genre's usual meters, sometimes anything at all.
+      if (chance(0.12)) {
+        den = weighted([[4, 3], [8, 3], [16, 1], [2, 1]]);
+        num = numeratorFor(den);
+      } else {
+        [num, den] = weighted(g.meters).split('/').map(Number);
+      }
       rolled.meter = true;
     } else if (!num) {
       num = numeratorFor(den);
@@ -2254,14 +2265,19 @@
   const ROLE_COLORS = { lead: '157, 140, 255', chords: '62, 207, 178', bass: '90, 169, 255' };
 
   // Narrow screens scroll the roll sideways instead of squashing the notes.
+  // Very long songs (huge bars) get fewer pixels per beat so the canvas
+  // stays under browser size limits.
   const ROLL_PX_PER_QUARTER = 16;
+  const ROLL_MAX_WIDTH = 16000;
 
   function sizeRoll() {
     const c = roll.canvas;
-    const dpr = window.devicePixelRatio || 1;
-    const minW = melody ? (melody.totalTicks / TPQ) * ROLL_PX_PER_QUARTER : 0;
+    const minW = melody ? Math.min(ROLL_MAX_WIDTH, (melody.totalTicks / TPQ) * ROLL_PX_PER_QUARTER) : 0;
     c.style.width = `${Math.max(c.parentElement.clientWidth, Math.ceil(minW))}px`;
     const rect = c.getBoundingClientRect();
+    // Stay inside canvas limits (iOS Safari allows about 16 million pixels).
+    const dpr = Math.max(0.25, Math.min(window.devicePixelRatio || 1, 32000 / Math.max(1, rect.width), Math.sqrt(16e6 / Math.max(1, rect.width * rect.height))));
+    roll.dpr = dpr;
     roll.w = rect.width;
     roll.h = rect.height;
     c.width = Math.round(rect.width * dpr);
@@ -2285,7 +2301,7 @@
     off.width = roll.canvas.width;
     off.height = roll.canvas.height;
     const g = off.getContext('2d');
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = roll.dpr || 1;
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     const m = melody;
     const L = rollLayout();
@@ -2444,7 +2460,8 @@
       genre: $('m-genre').value,
       mood: $('m-mood').value,
       bpm: num('m-bpm', 30, 300),
-      tsNum: num('m-ts-num', 1, 16),
+      // 255 is the most a MIDI file can store for beats per bar.
+      tsNum: num('m-ts-num', 1, 255),
       tsDen: den ? Number(den) : '',
       root: root === '' ? '' : Number(root),
       scale: $('m-key-mode').value,

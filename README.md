@@ -4,8 +4,8 @@ This fork turns the boilerplate into a browser music tool (`src/index.html`,
 `src/js/app.js`, `src/css/app.css`). It has no dependencies and runs on the
 Web Audio API.
 
-- **Music generator**: set BPM, time signature (any `n/2`, `n/4`, `n/8` or
-  `n/16`), key and scale, length (short/medium/long = 4/8/16 bars), rhythmic
+- **Music generator**: set BPM, time signature (1–255 beats over 1, 2, 4, 8, 16, 32
+  or 64), key and scale, length (short/medium/long = 4/8/16 bars), rhythmic
   pattern, genre, mood and instrument. Every option is optional. Each of the 14
   instruments has its own sound, range, phrasing and rhythm preferences. Anything left on
   _Random_ is rolled from the genre's profile, and the result shows what was

@@ -89,14 +89,17 @@
         <div class="field" data-random-field>
           <span class="label" id="m-ts-label">Time signature</span>
           <div class="inline-pair">
-            <input type="number" id="m-ts-num" name="tsNum" min="1" max="16" step="1" placeholder="?" inputmode="numeric" aria-labelledby="m-ts-label" aria-label="Beats per bar">
+            <input type="number" id="m-ts-num" name="tsNum" min="1" max="255" step="1" placeholder="?" inputmode="numeric" aria-labelledby="m-ts-label" aria-label="Beats per bar">
             <span class="slash" aria-hidden="true">/</span>
             <select id="m-ts-den" name="tsDen" aria-label="Beat unit">
               <option value="">?</option>
+              <option value="1">1</option>
               <option value="2">2</option>
               <option value="4">4</option>
               <option value="8">8</option>
               <option value="16">16</option>
+              <option value="32">32</option>
+              <option value="64">64</option>
             </select>
           </div>
         </div>
