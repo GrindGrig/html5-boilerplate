@@ -213,6 +213,82 @@
 
   const LENGTHS = { short: 4, medium: 8, long: 16 };
 
+  // Moods tilt whatever the user leaves on Random toward a feeling, on top
+  // of the genre: scale and rhythm weights multiply with the genre's, tempo
+  // scales the genre's range. `leap` scales how far the melody jumps,
+  // `rest` adds or removes space, `register` moves it up or down (semitones).
+  const MOODS = {
+    happy: {
+      name: 'Happy', tempo: 1.1, leap: 1, rest: 0, register: 0,
+      scales: [['major', 5], ['majorPentatonic', 4], ['lydian', 1], ['mixolydian', 1]],
+      rhythms: [['straight', 3], ['syncopated', 3], ['offbeat', 2], ['dotted', 1]],
+      sounds: ['pluck', 'bell'],
+    },
+    sad: {
+      name: 'Sad', tempo: 0.8, leap: 0.8, rest: 0.06, register: -5,
+      scales: [['minor', 5], ['harmonicMinor', 2], ['dorian', 1], ['minorPentatonic', 1]],
+      rhythms: [['sparse', 4], ['straight', 2], ['dotted', 2]],
+      sounds: ['keys', 'pad'],
+    },
+    dark: {
+      name: 'Dark', tempo: 0.9, leap: 1, rest: 0.05, register: -12,
+      scales: [['phrygian', 4], ['harmonicMinor', 3], ['minor', 2]],
+      rhythms: [['sparse', 3], ['syncopated', 2], ['triplet', 2]],
+      sounds: ['lead', 'pad'],
+    },
+    dreamy: {
+      name: 'Dreamy', tempo: 0.85, leap: 1.3, rest: 0.04, register: 5,
+      scales: [['lydian', 5], ['majorPentatonic', 3], ['major', 1], ['dorian', 1]],
+      rhythms: [['sparse', 3], ['arpeggio', 3], ['triplet', 2]],
+      sounds: ['pad', 'bell'],
+    },
+    calm: {
+      name: 'Calm', tempo: 0.85, leap: 0.7, rest: 0.05, register: 0,
+      scales: [['majorPentatonic', 5], ['major', 2], ['dorian', 1]],
+      rhythms: [['sparse', 4], ['straight', 3]],
+      sounds: ['keys', 'pad'],
+    },
+    energetic: {
+      name: 'Energetic', tempo: 1.15, leap: 1.1, rest: -0.05, register: 5,
+      scales: [['minor', 2], ['major', 2], ['minorPentatonic', 2], ['mixolydian', 1]],
+      rhythms: [['dense', 3], ['syncopated', 3], ['offbeat', 2], ['arpeggio', 2]],
+      sounds: ['lead', 'pluck'],
+    },
+    tense: {
+      name: 'Tense', tempo: 1.05, leap: 1.4, rest: 0, register: 0,
+      scales: [['harmonicMinor', 4], ['phrygian', 3], ['minor', 1]],
+      rhythms: [['syncopated', 3], ['dense', 2], ['triplet', 2]],
+      sounds: ['lead', 'bell'],
+    },
+    mysterious: {
+      name: 'Mysterious', tempo: 0.9, leap: 1.2, rest: 0.05, register: 0,
+      scales: [['dorian', 3], ['phrygian', 2], ['harmonicMinor', 2], ['lydian', 1]],
+      rhythms: [['triplet', 3], ['sparse', 3], ['syncopated', 2]],
+      sounds: ['bell', 'pad'],
+    },
+    romantic: {
+      name: 'Romantic', tempo: 0.9, leap: 1.1, rest: 0.02, register: 0,
+      scales: [['major', 3], ['minor', 2], ['harmonicMinor', 2]],
+      rhythms: [['dotted', 3], ['triplet', 2], ['straight', 2]],
+      sounds: ['keys'],
+    },
+    epic: {
+      name: 'Epic', tempo: 1, leap: 1.3, rest: 0, register: 5,
+      scales: [['minor', 4], ['harmonicMinor', 2], ['dorian', 1]],
+      rhythms: [['dotted', 3], ['straight', 2], ['triplet', 2]],
+      sounds: ['lead'],
+    },
+  };
+
+  // Multiplies genre and mood weights; options only one side likes keep a
+  // small weight so the result never comes up empty.
+  function blendWeights(genreEntries, moodEntries) {
+    const g = new Map(genreEntries);
+    const m = new Map(moodEntries);
+    const keys = new Set([...g.keys(), ...m.keys()]);
+    return Array.from(keys, (k) => [k, (g.get(k) || 0.3) * (m.get(k) || 0.15)]);
+  }
+
   function scaleHarmony(scaleKey) {
     const scale = SCALES[scaleKey];
     return scale.harmony ? SCALES[scale.harmony].steps : scale.steps;
@@ -611,7 +687,9 @@
 
     const genre = roll('genre', input.genre, () => pick(Object.keys(GENRES)));
     const g = GENRES[genre];
-    const bpm = roll('bpm', input.bpm, () => randInt(g.bpm[0], g.bpm[1]));
+    const mood = roll('mood', input.mood, () => pick(Object.keys(MOODS)));
+    const md = MOODS[mood];
+    const bpm = roll('bpm', input.bpm, () => clamp(Math.round(randInt(g.bpm[0], g.bpm[1]) * md.tempo), 40, 240));
 
     let num = input.tsNum;
     let den = input.tsDen;
@@ -627,12 +705,12 @@
     }
 
     const root = roll('root', input.root, () => randInt(0, 11));
-    const scale = roll('scale', input.scale, () => weighted(g.scales));
+    const scale = roll('scale', input.scale, () => weighted(blendWeights(g.scales, md.scales)));
     const length = roll('length', input.length, () => pick(Object.keys(LENGTHS)));
-    const rhythm = roll('rhythm', input.rhythm, () => weighted(g.rhythms));
-    const sound = roll('sound', input.sound, () => g.sound);
+    const rhythm = roll('rhythm', input.rhythm, () => weighted(blendWeights(g.rhythms, md.rhythms)));
+    const sound = roll('sound', input.sound, () => (chance(0.5) ? g.sound : pick(md.sounds)));
 
-    return { genre, bpm, num, den, root, scale, length, rhythm, sound, rolled };
+    return { genre, mood, bpm, num, den, root, scale, length, rhythm, sound, rolled };
   }
 
   function resolveSwing(settings, groups) {
@@ -655,20 +733,27 @@
     const barTicks = groups.reduce((a, b) => a + b, 0);
     const bars = LENGTHS[s.length];
 
-    const lo = -Math.ceil(n * 0.43);
-    const hi = n + Math.ceil(n * 0.72);
+    // The mood's register moves the tonic by whole octaves and slides the
+    // melody's range by scale steps for the remainder.
+    const md = MOODS[s.mood];
+    const octaves = Math.trunc(md.register / 12);
+    let tonicMidi = (s.root <= 5 ? 60 : 48) + s.root + octaves * 12;
+    if (tonicMidi < 45) tonicMidi += 12;
+    const slide = Math.round(((md.register - octaves * 12) / 12) * n);
+    const lo = -Math.ceil(n * 0.43) + slide;
+    const hi = n + Math.ceil(n * 0.72) + slide;
     const ctx = {
       root: s.root,
       steps,
       n,
       lo,
       hi,
-      center: Math.round(n * 0.5),
+      center: Math.round(n * 0.5) + slide,
       span: (hi - lo) / 2,
-      tonicMidi: (s.root <= 5 ? 60 : 48) + s.root,
-      leap: g.leap,
+      tonicMidi,
+      leap: g.leap * md.leap,
       pattern: s.rhythm,
-      restProb: s.rhythm === 'arpeggio' ? 0 : g.rest * (s.rhythm === 'sparse' ? 1.4 : 1),
+      restProb: s.rhythm === 'arpeggio' ? 0 : clamp(g.rest * (s.rhythm === 'sparse' ? 1.4 : 1) + md.rest, 0, 0.5),
       arpUnit: pick([12, 24, 24]),
       groups,
       barTicks,
@@ -1829,6 +1914,7 @@
     const root = $('m-key-root').value;
     return {
       genre: $('m-genre').value,
+      mood: $('m-mood').value,
       bpm: num('m-bpm', 30, 300),
       tsNum: num('m-ts-num', 1, 16),
       tsDen: den ? Number(den) : '',
@@ -1855,6 +1941,7 @@
     const secs = Math.round((m.totalTicks * 60) / (m.bpm * TPQ));
     const chips = [
       ['Genre', GENRES[m.genre].name, r.genre],
+      ['Mood', MOODS[m.mood].name, r.mood],
       ['BPM', m.bpm, r.bpm],
       ['Time', `${m.num}/${m.den}`, r.meter],
       ['Key', `${NOTE_NAMES[m.root]} ${SCALES[m.scale].name}`, r.root || r.scale],
@@ -2100,6 +2187,7 @@
 
   function init() {
     fillSelect($('m-genre'), Object.keys(GENRES).map((k) => [k, GENRES[k].name]), 'Random');
+    fillSelect($('m-mood'), Object.keys(MOODS).map((k) => [k, MOODS[k].name]), 'Random');
     fillSelect($('m-key-root'), NOTE_NAMES.map((n, i) => [String(i), n]), 'Random root');
     fillSelect($('m-key-mode'), Object.keys(SCALES).map((k) => [k, SCALES[k].name]), 'Random scale');
     fillSelect($('m-rhythm'), Object.keys(RHYTHMS).map((k) => [k, RHYTHMS[k]]), 'Random');

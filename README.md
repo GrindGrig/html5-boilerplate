@@ -6,7 +6,7 @@ Web Audio API.
 
 - **Melody generator**: set BPM, time signature (any `n/2`, `n/4`, `n/8` or
   `n/16`), key and scale, length (short/medium/long = 4/8/16 bars), rhythmic
-  pattern, genre and sound. Every option is optional. Anything left on
+  pattern, genre, mood and sound. Every option is optional. Anything left on
   _Random_ is rolled from the genre's profile, and the result shows what was
   rolled. Melodies come with chords and export to MIDI.
 - **Drum machine**: 12-voice step sequencer with genre presets, half-time,
