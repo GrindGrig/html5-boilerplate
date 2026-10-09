@@ -8,7 +8,8 @@ Web Audio API.
   `n/16`), key and scale, length (short/medium/long = 4/8/16 bars), rhythmic
   pattern, genre, mood and sound. Every option is optional. Anything left on
   _Random_ is rolled from the genre's profile, and the result shows what was
-  rolled. Melodies come with chords and download as MIDI, either on their own or
+  rolled. Tap a result to lock it; Generate then re-rolls only the
+  unlocked settings. Melodies come with chords and download as MIDI, either on their own or
   together with the drum pattern in one file.
 - **Drum machine**: 12-voice step sequencer with genre presets, half-time,
   normal and double-time feel, a triplet grid, swing, humanize, mute, and

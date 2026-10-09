@@ -2015,32 +2015,63 @@
     });
   }
 
+  // Each result chip is a lock. Locking writes the rolled value into the
+  // form (so the next Generate keeps it); unlocking sets it back to Random.
+  const LOCK_ICON = '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5"></rect><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"></path></svg>';
+  const UNLOCK_ICON = '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5"></rect><path d="M5.5 7V5a2.5 2.5 0 0 1 4.9-.7"></path></svg>';
+
+  function lockableSettings(m) {
+    const secs = Math.round((m.totalTicks * 60) / (m.bpm * TPQ));
+    return [
+      { label: 'Genre', value: GENRES[m.genre].name, fields: { 'm-genre': m.genre } },
+      { label: 'Mood', value: MOODS[m.mood].name, fields: { 'm-mood': m.mood } },
+      { label: 'BPM', value: m.bpm, fields: { 'm-bpm': m.bpm } },
+      { label: 'Time', value: `${m.num}/${m.den}`, fields: { 'm-ts-num': m.num, 'm-ts-den': m.den } },
+      { label: 'Key', value: NOTE_NAMES[m.root], fields: { 'm-key-root': m.root } },
+      { label: 'Scale', value: SCALES[m.scale].name, fields: { 'm-key-mode': m.scale } },
+      { label: 'Length', value: `${m.bars} bars · ${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`, fields: { 'm-length': m.length } },
+      { label: 'Rhythm', value: RHYTHMS[m.rhythm] + (m.swing ? ' (swung)' : ''), fields: { 'm-rhythm': m.rhythm } },
+      { label: 'Sound', value: SOUNDS[m.sound], fields: { 'm-sound': m.sound } },
+    ];
+  }
+
   function renderRolled() {
     const box = $('m-rolled');
+    if (!melody) return;
     box.innerHTML = '';
-    const m = melody;
-    const r = m.rolled;
-    const secs = Math.round((m.totalTicks * 60) / (m.bpm * TPQ));
-    const chips = [
-      ['Genre', GENRES[m.genre].name, r.genre],
-      ['Mood', MOODS[m.mood].name, r.mood],
-      ['BPM', m.bpm, r.bpm],
-      ['Time', `${m.num}/${m.den}`, r.meter],
-      ['Key', `${NOTE_NAMES[m.root]} ${SCALES[m.scale].name}`, r.root || r.scale],
-      ['Length', `${m.bars} bars · ${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`, r.length],
-      ['Rhythm', RHYTHMS[m.rhythm] + (m.swing ? ' (swung)' : ''), r.rhythm],
-      ['Sound', SOUNDS[m.sound], r.sound],
-      ['Chords', m.chords.slice(0, Math.min(4, m.chords.length)).map((c) => c.name).join(' – '), false],
-    ];
-    chips.forEach(([label, value, rolled]) => {
-      const el = document.createElement('span');
-      el.className = 'chip' + (rolled ? ' is-random' : '');
+    lockableSettings(melody).forEach((setting) => {
+      const ids = Object.keys(setting.fields);
+      const locked = ids.every((id) => $(id).value !== '');
+      const el = document.createElement('button');
+      el.type = 'button';
+      el.className = 'chip chip-lock' + (locked ? ' is-locked' : ' is-random');
+      el.setAttribute('aria-pressed', String(locked));
+      el.title = locked ? `Unlock ${setting.label} so Generate re-rolls it` : `Lock ${setting.label} at ${setting.value}`;
+      el.innerHTML = locked ? LOCK_ICON : UNLOCK_ICON;
       const b = document.createElement('b');
-      b.textContent = label;
+      b.textContent = setting.label;
       el.appendChild(b);
-      el.appendChild(document.createTextNode(String(value)));
+      el.appendChild(document.createTextNode(String(setting.value)));
+      el.addEventListener('click', () => {
+        ids.forEach((id) => {
+          $(id).value = locked ? '' : String(setting.fields[id]);
+        });
+        updateRandomBadges();
+        renderRolled();
+        const again = Array.from(box.children).find((c) => c.querySelector('b').textContent === setting.label);
+        if (again) again.focus();
+      });
       box.appendChild(el);
     });
+
+    const chords = document.createElement('span');
+    chords.className = 'chip';
+    const b = document.createElement('b');
+    b.textContent = 'Chords';
+    chords.appendChild(b);
+    chords.appendChild(document.createTextNode(melody.chords.slice(0, Math.min(4, melody.chords.length)).map((c) => c.name).join(' – ')));
+    box.appendChild(chords);
+    $('m-lock-hint').hidden = false;
   }
 
   function generate() {
@@ -2066,6 +2097,7 @@
   function resetMelodyControls() {
     $('melody-form').reset();
     updateRandomBadges();
+    renderRolled();
   }
 
   // ---------------------------------------------------------------------
@@ -2306,7 +2338,10 @@
     // Melody
     const form = $('melody-form');
     form.addEventListener('input', updateRandomBadges);
-    form.addEventListener('change', updateRandomBadges);
+    form.addEventListener('change', () => {
+      updateRandomBadges();
+      renderRolled();
+    });
     form.addEventListener('submit', (e) => {
       e.preventDefault();
       generate();

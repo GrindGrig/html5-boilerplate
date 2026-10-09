@@ -514,6 +514,56 @@ input[type="range"] {
   font-size: 0.68rem;
 }
 
+.chip-lock {
+  align-items: center;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.chip-lock svg {
+  width: 13px;
+  height: 13px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  color: var(--muted);
+  flex: none;
+}
+
+.chip-lock.is-locked {
+  border-color: var(--melody);
+  background: var(--panel-2);
+}
+
+.chip-lock.is-locked svg {
+  color: var(--melody);
+}
+
+.chip-lock.is-locked svg rect {
+  fill: var(--melody);
+}
+
+.chip-lock:focus-visible {
+  outline: 2px solid var(--melody);
+  outline-offset: 2px;
+}
+
+@media (hover: hover) {
+  .chip-lock:hover {
+    border-color: var(--melody);
+  }
+}
+
+.lock-hint {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
 /* Piano roll
    ========================================================================== */
 
@@ -802,6 +852,10 @@ input[type="range"] {
 
   .piano-roll {
     height: 240px;
+  }
+
+  .chip-lock {
+    min-height: 36px;
   }
 
   /* Sequencer: name + mute on one line, the steps below in two rows

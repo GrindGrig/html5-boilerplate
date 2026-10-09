@@ -131,7 +131,7 @@
           <input type="range" id="m-volume" min="0" max="1" step="0.01" value="0.8">
         </label>
         <span class="spacer"></span>
-        <button type="button" class="btn btn-ghost" id="m-reset">Reset all to random</button>
+        <button type="button" class="btn btn-ghost" id="m-reset">Unlock all</button>
         <button type="button" class="btn btn-ghost" id="m-export" disabled>Download melody MIDI</button>
         <button type="button" class="btn btn-ghost" id="m-export-all" disabled>Download melody + drums MIDI</button>
       </div>
@@ -140,6 +140,7 @@
       <div class="rolled" id="m-rolled" aria-live="polite">
         <p class="rolled-empty">No melody yet. Press <strong>Generate</strong>.</p>
       </div>
+      <p class="lock-hint" id="m-lock-hint" hidden>Tap a setting to lock it. <strong>Generate</strong> re-rolls everything that isn't locked.</p>
 
       <div class="roll-wrap">
         <canvas id="m-roll" class="piano-roll" role="img" aria-label="Piano roll of the generated melody"></canvas>
