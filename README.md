@@ -6,7 +6,8 @@ Web Audio API.
 
 - **Melody generator**: set BPM, time signature (any `n/2`, `n/4`, `n/8` or
   `n/16`), key and scale, length (short/medium/long = 4/8/16 bars), rhythmic
-  pattern, genre, mood and sound. Every option is optional. Anything left on
+  pattern, genre, mood and instrument. Every option is optional. Each of the 14
+  instruments has its own sound, range, phrasing and rhythm preferences. Anything left on
   _Random_ is rolled from the genre's profile, and the result shows what was
   rolled. Tap a result to lock it; Generate then re-rolls only the
   unlocked settings. Melodies come with chords and download as MIDI, either on their own or

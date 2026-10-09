@@ -115,10 +115,11 @@
           <select id="m-rhythm" name="rhythm"></select>
         </div>
 
-        <div class="field" data-random-field>
-          <label for="m-sound">Sound</label>
-          <select id="m-sound" name="sound"></select>
-        </div>
+        <fieldset class="field field-instrument" data-random-field>
+          <legend>Instrument</legend>
+          <div class="instrument-picker" id="m-instrument" role="radiogroup" aria-describedby="m-inst-info"></div>
+          <p class="inst-info" id="m-inst-info"></p>
+        </fieldset>
       </form>
 
       <div class="actions">
