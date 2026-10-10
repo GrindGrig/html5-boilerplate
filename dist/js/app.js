@@ -2517,6 +2517,8 @@
 
   function sizeRoll() {
     const c = roll.canvas;
+    // Hidden behind the drum machine tab: sized when shown again.
+    if (!c.offsetParent) return;
     const minW = melody ? Math.min(ROLL_MAX_WIDTH, (melody.totalTicks / TPQ) * ROLL_PX_PER_QUARTER) : 0;
     c.style.width = `${Math.max(c.parentElement.clientWidth, Math.ceil(minW))}px`;
     c.style.height = '';
@@ -3590,6 +3592,47 @@
     renderGrid();
   }
 
+  // | Views: the generator and the drum machine share the page as tabs.
+
+  const VIEW_KEY = 'mds-view';
+
+  function setView(view, focus) {
+    document.querySelectorAll('.view-tab').forEach((tab) => {
+      const on = tab.dataset.view === view;
+      tab.setAttribute('aria-selected', String(on));
+      tab.tabIndex = on ? 0 : -1;
+      if (on && focus) tab.focus();
+    });
+    $('view-melody').hidden = view !== 'melody';
+    $('view-drums').hidden = view !== 'drums';
+    // The roll measures its box, which is empty while hidden.
+    if (view === 'melody') sizeRoll();
+    try {
+      localStorage.setItem(VIEW_KEY, view);
+    } catch {
+      // Private mode or blocked storage: the view just isn't remembered.
+    }
+  }
+
+  function initViews() {
+    const tabs = Array.from(document.querySelectorAll('.view-tab'));
+    tabs.forEach((tab, i) => {
+      tab.addEventListener('click', () => setView(tab.dataset.view));
+      tab.addEventListener('keydown', (e) => {
+        if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+        e.preventDefault();
+        setView(tabs[(i + 1) % tabs.length].dataset.view, true);
+      });
+    });
+    let saved = null;
+    try {
+      saved = localStorage.getItem(VIEW_KEY);
+    } catch {
+      // Storage blocked: start on the generator.
+    }
+    setView(saved === 'drums' ? 'drums' : 'melody');
+  }
+
   function updatePlayButtons() {
     const mBtn = $('m-play');
     mBtn.textContent = mp.playing ? 'Stop' : 'Play';
@@ -3597,6 +3640,8 @@
     const dBtn = $('d-play');
     dBtn.textContent = dp.playing ? 'Stop' : 'Play';
     dBtn.classList.toggle('is-active', dp.playing);
+    $('tab-melody').classList.toggle('is-playing', mp.playing);
+    $('tab-drums').classList.toggle('is-playing', dp.playing);
     const all = mp.playing && dp.playing;
     $('play-all').textContent = all ? 'Restart all' : 'Play all';
     const active = mp.playing || dp.playing;
@@ -3877,6 +3922,7 @@
     roll.canvas = $('m-roll');
     roll.ctx = roll.canvas.getContext('2d');
     initRollEditing();
+    initViews();
     ['touchstart', 'wheel', 'pointerdown'].forEach((type) => {
       roll.canvas.parentElement.addEventListener(type, () => {
         roll.touchedAt = performance.now();

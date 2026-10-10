@@ -54,10 +54,15 @@
 
   <main class="layout">
 
+    <div class="view-tabs" role="tablist" aria-label="Tools">
+      <button type="button" class="view-tab" role="tab" id="tab-melody" data-view="melody" aria-controls="view-melody" aria-selected="true">Music generator<i class="tab-playing" aria-hidden="true"></i></button>
+      <button type="button" class="view-tab view-tab-drums" role="tab" id="tab-drums" data-view="drums" aria-controls="view-drums" aria-selected="false" tabindex="-1">Drum machine<i class="tab-playing" aria-hidden="true"></i></button>
+    </div>
+
     <!-- Melody generator -->
-    <section class="panel panel-melody" aria-labelledby="melody-title">
+    <section class="panel panel-melody" id="view-melody" role="tabpanel" aria-labelledby="tab-melody">
       <div class="panel-head">
-        <h2 id="melody-title">Music generator</h2>
+        <h2 id="melody-title" class="visually-hidden">Music generator</h2>
         <p class="hint">Anything left on <strong>Random</strong> is picked for you.</p>
       </div>
 
@@ -172,9 +177,9 @@
     </section>
 
     <!-- Drum machine -->
-    <section class="panel panel-drums" aria-labelledby="drums-title">
+    <section class="panel panel-drums" id="view-drums" role="tabpanel" aria-labelledby="tab-drums" hidden>
       <div class="panel-head">
-        <h2 id="drums-title">Drum machine</h2>
+        <h2 id="drums-title" class="visually-hidden">Drum machine</h2>
         <p class="hint">Pick a genre preset and any time signature, then change the feel or switch to triplets. Click a step to cycle <em>off → hit → accent</em>. Click a drum name to hear it.</p>
       </div>
 

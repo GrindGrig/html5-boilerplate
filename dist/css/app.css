@@ -119,6 +119,86 @@ h2 {
   min-width: 0;
 }
 
+/* Switching between the generator and the drum machine */
+.view-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+}
+
+.view-tab {
+  flex: 1 1 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 36px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 650;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.view-tab[aria-selected="true"] {
+  background: var(--melody);
+  color: #13101f;
+}
+
+.view-tab-drums[aria-selected="true"] {
+  background: var(--drums);
+  color: #1f1404;
+}
+
+.view-tab:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 1px;
+}
+
+@media (hover: hover) {
+  .view-tab[aria-selected="false"]:hover {
+    background: var(--panel-2);
+    color: var(--text);
+  }
+}
+
+/* Shows on a tab whose part is playing while you look at the other one. */
+.tab-playing {
+  display: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: tab-pulse 1s ease-in-out infinite;
+}
+
+.view-tab.is-playing .tab-playing {
+  display: inline-block;
+}
+
+@keyframes tab-pulse {
+  50% {
+    opacity: 0.3;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tab-playing {
+    animation: none;
+  }
+}
+
+.panel[hidden] {
+  display: none;
+}
+
 .panel-melody {
   border-top: 3px solid var(--melody);
 }

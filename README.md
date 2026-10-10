@@ -26,6 +26,9 @@ Web Audio API.
   normal and double-time feel, a triplet grid, swing, humanize, mute, and
   MIDI export.
 
+The generator and the drum machine are two tabs; whatever is playing keeps
+playing when you switch, and a pulsing dot marks a playing tab.
+
 Open `src/index.html` in a browser, or run `npm run build` and serve `dist/`.
 
 **VST3 / AU plugin**: `plugin/` builds the same app as an instrument plugin
