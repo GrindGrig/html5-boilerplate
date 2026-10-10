@@ -1,5 +1,5 @@
 /*
- * Melody & Drum Studio
+ * Sonata
  *
  * A melody generator and a step-sequencer drum machine built on the
  * Web Audio API. No dependencies.
@@ -2801,7 +2801,7 @@
     const sf = FIFTHS[mod(m.root + scale.rel, 12)];
 
     const conductor = [
-      { tick: 0, bytes: textEvent(0x03, 'Melody & Drum Studio') },
+      { tick: 0, bytes: textEvent(0x03, 'Sonata') },
       tempoEvent(m.bpm / m.tickScale),
       { tick: 0, bytes: [0xff, 0x58, 0x04, m.num, Math.log2(m.gridDen), 24, 8] },
       { tick: 0, bytes: [0xff, 0x59, 0x02, sf & 255, scale.minor ? 1 : 0] },
