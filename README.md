@@ -22,6 +22,11 @@ Web Audio API.
   regenerating the song: mutate, new rhythm, new notes, simplify, embellish,
   reverse, invert, humanize, legato, staccato, octave up/down, and key up/down
   for the whole song.
+- **Upload a MIDI file** (button or drag and drop): its key, tempo, meter,
+  length and bar-by-bar chords are detected, and the generator writes parts
+  that complement it: a lead in a different register with rhythms that leave
+  room around the file's, a harmonization (chords and bass), or a whole
+  ensemble. The file plays along as its own part and is included in exports.
 - **Drum machine**: 12-voice step sequencer in any time signature, with genre presets, half-time,
   normal and double-time feel, a triplet grid, swing, humanize, mute, and
   MIDI export.

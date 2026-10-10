@@ -916,15 +916,37 @@
     return swing;
   }
 
-  function generateMelody(input) {
+  // Phrase plan for any number of bars (an uploaded file's length).
+  function anyLengthPlan(bars, chords, root) {
+    let plan = [];
+    const base = bars <= 4 ? 4 : bars <= 8 ? 8 : 16;
+    while (plan.length < bars) plan = plan.concat(phrasePlan(base));
+    plan = plan.slice(0, bars).map((spec) => Object.assign({}, spec, { cad: undefined }));
+    // End on the tonic only if the file's last chord holds it.
+    plan[bars - 1] = { id: 'cad', cad: chords[bars - 1].pcs.includes(root) ? 'full' : 'half' };
+    return plan;
+  }
+
+  function generateMelody(rawInput) {
+    // With an uploaded file, its key, tempo, meter, length and chords are
+    // fixed, and the rhythm is picked to leave room around it.
+    const ref = rawInput.reference || null;
+    const input = ref ? Object.assign({}, rawInput, {
+      bpm: ref.bpm, tsNum: ref.num, tsDen: ref.den, root: ref.root, scale: ref.scale,
+      rhythm: rawInput.rhythm || complementRhythm(ref.density),
+    }) : rawInput;
     const s = resolveSettings(input);
+    if (ref) {
+      s.rolled.rhythm = !rawInput.rhythm;
+      s.rolled.length = false;
+    }
     const g = GENRES[s.genre];
     const scale = SCALES[s.scale];
     const steps = scale.steps;
     const n = steps.length;
     const groups = beatGroups(s.num, gridDen(s.den));
     const barTicks = groups.reduce((a, b) => a + b, 0);
-    const bars = LENGTHS[s.length];
+    const bars = ref ? ref.bars : LENGTHS[s.length];
 
     // Fit the melody into the instrument's range. The mood nudges it up or
     // down; the tonic sits about a fifth below the target so the melody's
@@ -932,7 +954,13 @@
     const md = MOODS[s.mood];
     const inst = INSTRUMENTS[s.instrument];
     const [low, high] = inst.range;
-    const target = clamp((low + high) / 2 + md.register * 0.6, low + 6, high - 6);
+    let target = clamp((low + high) / 2 + md.register * 0.6, low + 6, high - 6);
+    if (ref) {
+      // Sit about an octave away from the file, on the side with more room.
+      const above = clamp(ref.mean + 10, low + 6, high - 6);
+      const below = clamp(ref.mean - 10, low + 6, high - 6);
+      target = Math.abs(above - ref.mean) >= Math.abs(below - ref.mean) ? above : below;
+    }
     const tonicMidi = s.root + 12 * Math.round((target - 7 - s.root) / 12);
     const toMidi = (idx) => tonicMidi + 12 * Math.floor(idx / n) + steps[mod(idx, n)];
     let lo = -Math.ceil(n * 0.43);
@@ -966,7 +994,7 @@
     const harmony = scaleHarmony(s.scale);
     const progs = scale.modal ? MODAL_PROGS[s.scale] : (scale.minor ? g.prog.minor || g.prog.major : g.prog.major);
     const prog = pick(progs);
-    const plan = phrasePlan(bars);
+    const plan = ref ? anyLengthPlan(bars, ref.chords, s.root) : phrasePlan(bars);
 
     const startDegree = pick([0, 2, n > 5 ? 4 : 3]);
     const state = { prev: nearestIdx(ctx, ctx.center, (i) => mod(i, n) === startDegree), lastMove: 0, dir: 1 };
@@ -975,8 +1003,8 @@
     const chords = [];
 
     plan.forEach((spec, bar) => {
-      const deg = spec.cad === 'full' ? 0 : prog[bar % prog.length];
-      const pcs = chordPcs(s.root, harmony, deg, g.sevenths);
+      const deg = ref ? ref.chords[bar].deg : (spec.cad === 'full' ? 0 : prog[bar % prog.length]);
+      const pcs = ref ? ref.chords[bar].pcs.slice() : chordPcs(s.root, harmony, deg, g.sevenths);
       chords.push({ bar, deg, pcs, name: chordName(pcs) });
 
       let rhythm;
@@ -1025,12 +1053,15 @@
       barTicks,
       bars,
       totalTicks: bars * barTicks,
-      swing: resolveSwing(s, groups),
+      // A file brings its own feel, so nothing is swung on top of it.
+      swing: ref ? null : resolveSwing(s, groups),
       sevenths: !!g.sevenths,
       gridDen: gridDen(s.den),
       // Seconds per grid tick are scaled by this (1 for power-of-two meters).
       tickScale: gridDen(s.den) / s.den,
+      reference: ref,
     });
+    if (ref) complementLead(m);
     buildParts(m);
     return m;
   }
@@ -1282,7 +1313,7 @@
     return notes;
   }
 
-  const PART_NAMES = { lead: 'Lead', harmony: 'Harmony', counter: 'Counter-line', chords: 'Chords', arp: 'Arpeggio', pad: 'Pad', bass: 'Bass' };
+  const PART_NAMES = { source: 'Uploaded', lead: 'Lead', harmony: 'Harmony', counter: 'Counter-line', chords: 'Chords', arp: 'Arpeggio', pad: 'Pad', bass: 'Bass' };
 
   // Gives each chosen instrument a part: the first melodic instrument plays
   // the melody, further ones harmonise; chord instruments comp, then
@@ -1312,6 +1343,7 @@
 
   const PART_BUILDERS = {
     lead: (m) => m.notes,
+    source: (m) => m.reference.notes.map((n) => Object.assign({}, n)),
     harmony: (m, r) => harmonyPart(m, r.instrument, r.interval),
     counter: (m, r) => counterPart(m, r.instrument),
     chords: (m, r) => chordPart(m, r.instrument, 'comp'),
@@ -1329,6 +1361,8 @@
     if (m.mode === 'melody') roles = [{ id: 'lead', role: 'lead', instrument: m.instrument }];
     else if (m.mode === 'chords') roles = [{ id: 'chords', role: 'chords', instrument: m.chordInstrument }, { id: 'bass', role: 'bass', instrument: m.bassInstrument }];
     else roles = ensembleRoles(m.ensemble && m.ensemble.length ? m.ensemble : [m.instrument, m.chordInstrument, m.bassInstrument]);
+    // An uploaded file plays as its own part, first.
+    if (m.reference) roles = [{ id: 'source', role: 'source', instrument: m.reference.instrument }].concat(roles);
     m.edits = m.edits || {};
     m.parts = roles.map((r) => Object.assign({}, r, { notes: r.role === 'lead' ? m.notes : (m.edits[r.id] || partNotes(m, r)) }));
   }
@@ -2075,7 +2109,7 @@
   }
 
   // Chord parts stack several voices, so each sounds softer.
-  const ROLE_LEVEL = { lead: 1, harmony: 0.75, counter: 0.7, chords: 0.55, arp: 0.65, pad: 0.45, bass: 0.9 };
+  const ROLE_LEVEL = { source: 0.85, lead: 1, harmony: 0.75, counter: 0.7, chords: 0.55, arp: 0.65, pad: 0.45, bass: 0.9 };
 
   // MIDI channel (1-16) for each part in order, skipping drum channel 10;
   // melody mode's backing chords take the next free one.
@@ -2241,6 +2275,318 @@
       dp.nextTime += sd;
       dp.step++;
     }
+  }
+
+  // ---------------------------------------------------------------------
+  // | MIDI import: read a file and work out its key, tempo, meter and   |
+  // | chords, so new parts can be written to go with it.                |
+  // ---------------------------------------------------------------------
+
+  // Reads a Standard MIDI File into notes (in file ticks) plus its first
+  // tempo, time signature and program per channel.
+  function parseMidi(bytes) {
+    const d = bytes;
+    const str = (at, len) => String.fromCharCode.apply(null, Array.from(d.subarray(at, at + len)));
+    const u32 = (at) => ((d[at] << 24) >>> 0) + (d[at + 1] << 16) + (d[at + 2] << 8) + d[at + 3];
+    const u16 = (at) => (d[at] << 8) + d[at + 1];
+    if (d.length < 14 || str(0, 4) !== 'MThd') throw new Error('This is not a MIDI file.');
+    const headerLen = u32(4);
+    const trackCount = u16(10);
+    const division = u16(12);
+    if (division & 0x8000) throw new Error('MIDI files timed in SMPTE frames are not supported.');
+    const out = { tpq: division || 480, tempo: null, ts: null, notes: [], programs: {}, names: [] };
+    let pos = 8 + headerLen;
+    for (let t = 0; t < trackCount && pos + 8 <= d.length; t++) {
+      if (str(pos, 4) !== 'MTrk') break;
+      const end = Math.min(d.length, pos + 8 + u32(pos + 4));
+      let i = pos + 8;
+      pos = end;
+      let tick = 0;
+      let status = 0;
+      const open = {};
+      const varLen = () => {
+        let v = 0;
+        for (let k = 0; k < 4 && i < end; k++) {
+          const b = d[i++];
+          v = (v << 7) | (b & 0x7f);
+          if (b < 0x80) break;
+        }
+        return v;
+      };
+      while (i < end) {
+        tick += varLen();
+        let st = d[i];
+        if (st >= 0x80) {
+          i++;
+          if (st < 0xf0) status = st;
+        } else {
+          st = status; // running status
+        }
+        if (st === 0xff) {
+          const type = d[i++];
+          const len = varLen();
+          if (type === 0x51 && len === 3 && out.tempo === null) out.tempo = (d[i] << 16) + (d[i + 1] << 8) + d[i + 2];
+          if (type === 0x58 && len >= 2 && !out.ts) out.ts = [d[i], 2 ** d[i + 1]];
+          if (type === 0x03 && len) out.names.push(str(i, Math.min(len, 60)));
+          i += len;
+          continue;
+        }
+        if (st === 0xf0 || st === 0xf7) {
+          i += varLen();
+          continue;
+        }
+        const type = st & 0xf0;
+        const ch = st & 0x0f;
+        if (type === 0xc0 || type === 0xd0) {
+          if (type === 0xc0 && out.programs[ch] === undefined) out.programs[ch] = d[i];
+          i += 1;
+          continue;
+        }
+        const a = d[i];
+        const b = d[i + 1];
+        i += 2;
+        if (type !== 0x90 && type !== 0x80) continue;
+        const key = `${ch}:${a}`;
+        if (type === 0x90 && b > 0) {
+          (open[key] = open[key] || []).push({ tick, vel: b });
+        } else if (open[key] && open[key].length) {
+          const on = open[key].shift();
+          if (tick > on.tick) out.notes.push({ tick: on.tick, dur: tick - on.tick, midi: a, vel: on.vel / 127, ch, track: t });
+        }
+      }
+      // Notes never switched off end with their track.
+      Object.keys(open).forEach((key) => open[key].forEach((on) => {
+        const [ch, midi] = key.split(':').map(Number);
+        if (tick > on.tick) out.notes.push({ tick: on.tick, dur: tick - on.tick, midi, vel: on.vel / 127, ch, track: t });
+      }));
+    }
+    out.notes.sort((x, y) => x.tick - y.tick || x.midi - y.midi);
+    return out;
+  }
+
+  // General MIDI program -> the closest instrument here.
+  const GM_TO_INSTRUMENT = [
+    [0, 'piano'], [4, 'epiano'], [6, 'harpsichord'], [8, 'bells'], [11, 'vibes'], [12, 'marimba'], [14, 'bells'],
+    [16, 'organ'], [21, 'accordion'], [22, 'harmonica'], [23, 'accordion'], [24, 'guitar'], [26, 'eguitar'],
+    [32, 'upright'], [33, 'bass'], [38, 'synthbass'], [40, 'violin'], [42, 'cello'], [43, 'upright'], [44, 'strings'],
+    [46, 'harp'], [47, 'marimba'], [48, 'strings'], [52, 'choir'], [55, 'strings'], [56, 'trumpet'], [57, 'trombone'],
+    [58, 'tuba'], [59, 'trumpet'], [60, 'horn'], [61, 'trumpet'], [64, 'sax'], [68, 'oboe'], [70, 'clarinet'],
+    [71, 'clarinet'], [72, 'flute'], [80, 'synth'], [88, 'pad'], [96, 'pad'], [104, 'guitar'], [105, 'ukulele'],
+    [106, 'guitar'], [108, 'kalimba'], [109, 'harmonica'], [110, 'violin'], [111, 'oboe'], [112, 'bells'],
+    [113, 'marimba'], [114, 'steeldrum'], [115, 'marimba'], [120, 'piano'],
+  ];
+  const gmInstrument = (program) => GM_TO_INSTRUMENT.filter(([p]) => p <= program).pop()[1];
+
+  // Krumhansl-Kessler key profiles.
+  const KEY_MAJOR = [6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88];
+  const KEY_MINOR = [6.33, 2.68, 3.52, 5.38, 2.6, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17];
+
+  function correlate(a, b) {
+    const mean = (v) => v.reduce((x, y) => x + y, 0) / v.length;
+    const ma = mean(a);
+    const mb = mean(b);
+    let num = 0;
+    let da = 0;
+    let db = 0;
+    for (let i = 0; i < 12; i++) {
+      num += (a[i] - ma) * (b[i] - mb);
+      da += (a[i] - ma) ** 2;
+      db += (b[i] - mb) ** 2;
+    }
+    return da && db ? num / Math.sqrt(da * db) : 0;
+  }
+
+  // `openingBass` (the lowest pitch class at the start) breaks ties between
+  // relative keys, e.g. Am-F-C-G reads as A minor rather than C major.
+  function detectKey(weights, openingBass) {
+    let best = { root: 0, scale: 'major', score: -2 };
+    for (let r = 0; r < 12; r++) {
+      const rotated = weights.map((_, i) => weights[(i + r) % 12]);
+      const bonus = r === openingBass ? 0.08 : 0;
+      const maj = correlate(rotated, KEY_MAJOR) + bonus;
+      const min = correlate(rotated, KEY_MINOR) + bonus;
+      if (maj > best.score) best = { root: r, scale: 'major', score: maj };
+      if (min > best.score) best = { root: r, scale: 'minor', score: min };
+    }
+    // Modes and harmonic minor, when their telltale note clearly wins.
+    const w = (iv) => weights[(best.root + iv) % 12];
+    const clearly = (a, b) => a > 0 && a > b * 1.6;
+    if (best.scale === 'minor') {
+      if (clearly(w(11), w(10))) best.scale = 'harmonicMinor';
+      else if (clearly(w(9), w(8))) best.scale = 'dorian';
+      else if (clearly(w(1), w(2))) best.scale = 'phrygian';
+    } else if (clearly(w(10), w(11))) {
+      best.scale = 'mixolydian';
+    } else if (clearly(w(6), w(5))) {
+      best.scale = 'lydian';
+    }
+    return best;
+  }
+
+  const CHORD_SHAPES = [[0, 4, 7], [0, 3, 7], [0, 3, 6], [0, 4, 8], [0, 5, 7]];
+
+  // The chord that best explains one bar's notes, preferring chords of the
+  // key and roots in the bass.
+  function fitChord(weights, bassWeights, root, scaleKey, prev) {
+    const total = weights.reduce((a, b) => a + b, 0);
+    if (total <= 0) return prev;
+    const harmony = scaleHarmony(scaleKey);
+    const inKey = new Set(harmony.map((st) => mod(root + st, 12)));
+    let best = null;
+    for (let r = 0; r < 12; r++) {
+      CHORD_SHAPES.forEach((shape, si) => {
+        const pcs = shape.map((iv) => mod(r + iv, 12));
+        let score = 0;
+        for (let pc = 0; pc < 12; pc++) score += pcs.includes(pc) ? weights[pc] : -0.55 * weights[pc];
+        score += 0.6 * bassWeights[r];
+        if (pcs.every((pc) => inKey.has(pc))) score += 0.12 * total;
+        if (si >= 3) score -= 0.15 * total; // augmented and sus only when clearly there
+        if (prev && prev.pcs[0] === r) score += 0.04 * total;
+        if (!best || score > best.score) best = { score, pcs };
+      });
+    }
+    // A seventh that is clearly sounding.
+    const r = best.pcs[0];
+    const triadMean = best.pcs.reduce((a, pc) => a + weights[pc], 0) / 3;
+    const seventh = [10, 11].map((iv) => mod(r + iv, 12)).find((pc) => weights[pc] > triadMean * 0.6 && (inKey.has(pc) || weights[pc] > triadMean));
+    const pcs = seventh === undefined || best.pcs[2] === mod(r + 5, 12) ? best.pcs : best.pcs.concat([seventh]);
+    let deg = 0;
+    let dist = 99;
+    harmony.forEach((st, i) => {
+      const dd = Math.min(mod(r - (root + st), 12), mod(root + st - r, 12));
+      if (dd < dist) {
+        dist = dd;
+        deg = i;
+      }
+    });
+    return { pcs, deg };
+  }
+
+  const REFERENCE_MAX_BARS = 32;
+
+  // Everything the generator needs to write parts that fit a MIDI file.
+  function analyzeMidi(parsed, fileName) {
+    const notes = parsed.notes.filter((n) => n.ch !== 9);
+    if (!notes.length) throw new Error('No pitched notes found (drum tracks are ignored).');
+    const k = TPQ / parsed.tpq;
+    const q = (t) => Math.round((t * k) / 2) * 2;
+    const [num, den] = parsed.ts && parsed.ts[0] > 0 ? [clamp(parsed.ts[0], 1, 255), clamp(parsed.ts[1], 1, 64)] : [4, 4];
+    const groups = beatGroups(num, gridDen(den));
+    const barTicks = groups.reduce((a, b) => a + b, 0);
+    const bpm = clamp(Math.round(parsed.tempo ? 60000000 / parsed.tempo : 120), 30, 300);
+
+    // Start at the bar holding the first note, so leading silence is cut.
+    const firstBar = Math.floor(q(notes[0].tick) / barTicks);
+    const offset = firstBar * barTicks;
+    let ours = notes.map((n) => ({
+      tick: q(n.tick) - offset, dur: Math.max(3, q(n.dur)), midi: n.midi, vel: clamp(n.vel, 0.15, 1), ch: n.ch,
+    }));
+    const lastEnd = Math.max(...ours.map((n) => n.tick + n.dur));
+    const bars = clamp(Math.ceil((lastEnd - 1) / barTicks), 1, REFERENCE_MAX_BARS);
+    const totalTicks = bars * barTicks;
+    ours = ours.filter((n) => n.tick < totalTicks).slice(0, 4000);
+    ours.forEach((n) => {
+      n.dur = Math.min(n.dur, totalTicks - n.tick);
+    });
+
+    // Key from duration-weighted pitch classes.
+    const pcWeights = new Array(12).fill(0);
+    ours.forEach((n) => {
+      pcWeights[n.midi % 12] += n.dur * (0.5 + n.vel);
+    });
+    const opening = ours.filter((n) => n.tick < barTicks);
+    const key = detectKey(pcWeights, Math.min(...opening.map((n) => n.midi)) % 12);
+
+    // Chords bar by bar; the lowest notes count as the bass.
+    const chords = [];
+    for (let bar = 0; bar < bars; bar++) {
+      const from = bar * barTicks;
+      const to = from + barTicks;
+      const w = new Array(12).fill(0);
+      const bw = new Array(12).fill(0);
+      const inBar = ours.filter((n) => n.tick < to && n.tick + n.dur > from);
+      const lowest = inBar.length ? Math.min(...inBar.map((n) => n.midi)) : 0;
+      inBar.forEach((n) => {
+        const len = Math.min(to, n.tick + n.dur) - Math.max(from, n.tick);
+        const onBeat = groupStarts(groups).includes(mod(n.tick - from, barTicks)) ? 1.3 : 1;
+        w[n.midi % 12] += len * onBeat;
+        if (n.midi <= lowest + 7) bw[n.midi % 12] += len;
+      });
+      const prev = chords[bar - 1] || null;
+      const fit = fitChord(w, bw, key.root, key.scale, prev) ||
+        { pcs: chordPcs(key.root, scaleHarmony(key.scale), 0, false), deg: 0 };
+      chords.push({ bar, deg: fit.deg, pcs: fit.pcs, name: chordName(fit.pcs) });
+    }
+
+    // How busy the file is: note starts per beat, over bars with notes.
+    const beats = groups.length;
+    const onsets = new Set(ours.map((n) => n.tick));
+    const busyBars = new Set(ours.map((n) => Math.floor(n.tick / barTicks))).size || 1;
+    const density = onsets.size / (busyBars * beats);
+    const mean = ours.reduce((a, n) => a + n.midi, 0) / ours.length;
+
+    // The main channel's program decides how the file plays here.
+    const byCh = {};
+    ours.forEach((n) => {
+      byCh[n.ch] = (byCh[n.ch] || 0) + n.dur;
+    });
+    const mainCh = Object.keys(byCh).sort((a, b) => byCh[b] - byCh[a])[0];
+    const program = parsed.programs[mainCh];
+    const instrument = program === undefined ? 'piano' : gmInstrument(program);
+
+    return {
+      name: fileName || 'Uploaded MIDI',
+      notes: ours.map((n) => ({ tick: n.tick, dur: n.dur, midi: n.midi, vel: n.vel })),
+      bpm, num, den, root: key.root, scale: key.scale, bars, chords, density, mean,
+      low: Math.min(...ours.map((n) => n.midi)), high: Math.max(...ours.map((n) => n.midi)),
+      instrument,
+    };
+  }
+
+  // Rhythm that leaves room around the file's: busy files get sparse
+  // answers, sparse files get busier ones.
+  function complementRhythm(density) {
+    if (density >= 2.2) return pick(['sparse', 'sparse', 'dotted']);
+    if (density >= 1.3) return pick(['syncopated', 'dotted', 'sparse', 'offbeat']);
+    if (density >= 0.8) return pick(['syncopated', 'straight', 'dotted']);
+    return pick(['straight', 'dense', 'syncopated']);
+  }
+
+  // Keeps the new lead out of the file's way: it answers where the file
+  // is busy and moves off clashing notes (unisons and semitones).
+  function complementLead(m) {
+    const ref = m.reference;
+    const starts = new Map();
+    ref.notes.forEach((n) => starts.set(n.tick, (starts.get(n.tick) || 0) + 1));
+    const busyBar = (bar) => ref.notes.filter((n) => Math.floor(n.tick / m.barTicks) === bar).length >= m.groups.length * 2;
+    const strongSet = new Set(groupStarts(m.groups));
+    const out = [];
+    m.notes.forEach((n) => {
+      const local = n.tick % m.barTicks;
+      const prev = out[out.length - 1];
+      if (prev && !strongSet.has(local) && starts.has(n.tick) && busyBar(Math.floor(n.tick / m.barTicks)) && chance(0.6) &&
+        Math.floor(prev.tick / m.barTicks) === Math.floor(n.tick / m.barTicks)) {
+        prev.dur = n.tick + n.dur - prev.tick;
+        return;
+      }
+      out.push(n);
+    });
+    const sounding = (t) => ref.notes.filter((r) => r.tick <= t && r.tick + r.dur > t).map((r) => r.midi);
+    const [low, high] = INSTRUMENTS[m.instrument].range;
+    out.forEach((n) => {
+      const others = sounding(n.tick);
+      const clashes = (midi) => others.some((o) => o === midi || Math.abs(o - midi) === 1 || Math.abs(o - midi) === 13 || Math.abs(o - midi) === 11);
+      if (!clashes(n.midi)) return;
+      const chord = m.chords[Math.min(m.chords.length - 1, Math.floor(n.tick / m.barTicks))].pcs;
+      for (let dd = 1; dd <= 5; dd++) {
+        const cand = [n.midi + dd, n.midi - dd].find((c) => c >= low && c <= high && chord.includes(mod(c, 12)) && !clashes(c));
+        if (cand !== undefined) {
+          n.midi = cand;
+          return;
+        }
+      }
+    });
+    m.notes = out;
   }
 
   // ---------------------------------------------------------------------
@@ -2931,7 +3277,108 @@
       instrument: picker.selected[0] || '',
       instruments: genMode === 'ensemble' ? picker.selected.slice() : [],
       mode: genMode,
+      reference,
     };
+  }
+
+  // | Uploaded MIDI: new parts are written to go with it.
+
+  let reference = null;
+  const REF_FIELDS = ['m-bpm', 'm-ts-num', 'm-ts-den', 'm-key-root', 'm-key-mode', 'm-length'];
+
+  function updateRefUi() {
+    const bar = $('m-ref-bar');
+    bar.classList.toggle('is-loaded', !!reference);
+    $('m-ref-inst-wrap').hidden = !reference;
+    $('m-ref-clear').hidden = !reference;
+    REF_FIELDS.forEach((id) => {
+      $(id).disabled = !!reference;
+    });
+    const info = $('m-ref-info');
+    info.classList.remove('is-error');
+    if (reference) {
+      const r = reference;
+      const chords = r.chords.slice(0, 4).map((c) => c.name).join(' – ');
+      info.textContent = `${r.name}: ${NOTE_NAMES[r.root]} ${SCALES[r.scale].name} · ${r.bpm} BPM · ${r.num}/${r.den} · ${r.bars} bar${r.bars > 1 ? 's' : ''} · ${chords}${r.chords.length > 4 ? ' …' : ''}`;
+      $('m-bpm').value = r.bpm;
+      $('m-ts-num').value = r.num;
+      $('m-ts-den').value = r.den;
+      $('m-key-root').value = String(r.root);
+      $('m-key-mode').value = r.scale;
+      $('m-length').value = '';
+      $('m-ref-inst').value = r.instrument;
+    } else {
+      info.textContent = 'or drop a .mid file here to generate parts that complement it.';
+    }
+    updateRandomBadges();
+  }
+
+  function loadMidiFile(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const name = (file.name || 'Uploaded MIDI').replace(/\.(mid|midi)$/i, '');
+        reference = analyzeMidi(parseMidi(new Uint8Array(reader.result)), name);
+      } catch (err) {
+        $('m-ref-info').textContent = `Couldn't read ${file.name}: ${err.message || 'not a valid MIDI file.'}`;
+        $('m-ref-info').classList.add('is-error');
+        return;
+      }
+      updateRefUi();
+      initAudio();
+      generate();
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  function clearReference() {
+    reference = null;
+    if (melody && melody.reference) {
+      melody.reference = null;
+      delete melody.edits.source;
+      songChanged();
+      drawRoll(null);
+    }
+    REF_FIELDS.forEach((id) => {
+      $(id).value = '';
+    });
+    updateRefUi();
+  }
+
+  function initReference() {
+    fillSelect($('m-ref-inst'), Object.keys(INSTRUMENTS).map((k) => [k, INSTRUMENTS[k].name]));
+    $('m-file').addEventListener('change', (e) => {
+      loadMidiFile(e.target.files[0]);
+      e.target.value = '';
+    });
+    $('m-ref-clear').addEventListener('click', clearReference);
+    $('m-ref-inst').addEventListener('change', (e) => {
+      if (!reference) return;
+      reference.instrument = e.target.value;
+      if (melody && melody.reference) {
+        melody.reference.instrument = e.target.value;
+        songChanged();
+      }
+    });
+    // Dropping a file anywhere on the generator loads it.
+    const panel = $('view-melody');
+    const bar = $('m-ref-bar');
+    const hasFile = (e) => e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files');
+    panel.addEventListener('dragover', (e) => {
+      if (!hasFile(e)) return;
+      e.preventDefault();
+      bar.classList.add('is-dragging');
+    });
+    panel.addEventListener('dragleave', (e) => {
+      if (!panel.contains(e.relatedTarget)) bar.classList.remove('is-dragging');
+    });
+    panel.addEventListener('drop', (e) => {
+      if (!hasFile(e)) return;
+      e.preventDefault();
+      bar.classList.remove('is-dragging');
+      loadMidiFile(e.dataTransfer.files[0]);
+    });
   }
 
   // Generator mode, and the picked instruments remembered per mode: one
@@ -3124,8 +3571,10 @@
         field.classList.toggle('is-random', picker.selected.length === 0);
         return;
       }
-      const inputs = field.querySelectorAll('input, select');
-      field.classList.toggle('is-random', Array.from(inputs).some((el) => el.value === ''));
+      const inputs = Array.from(field.querySelectorAll('input, select'));
+      const fromFile = inputs.length > 0 && inputs.every((el) => el.disabled);
+      field.classList.toggle('is-from-file', fromFile);
+      field.classList.toggle('is-random', !fromFile && inputs.some((el) => el.value === ''));
     });
   }
 
@@ -3138,6 +3587,7 @@
     const secs = Math.round(((m.totalTicks * 60) / (m.bpm * TPQ)) * m.tickScale);
     const firstBars = m.chords.slice(0, Math.min(4, m.chords.length));
     const chips = [
+      ...(m.reference ? [[`Fits ${m.reference.name}`, false]] : []),
       [GENRES[m.genre].name, r.genre],
       [MOODS[m.mood].name, r.mood],
       [`${m.bpm} BPM`, r.bpm],
@@ -3184,6 +3634,7 @@
     $('melody-form').reset();
     picker.selected = [];
     renderPicker();
+    updateRefUi();
   }
 
   // ---------------------------------------------------------------------
@@ -3801,6 +4252,8 @@
     if (sess.melody) {
       melody = sess.melody;
       melody.edits = melody.edits || {};
+      reference = melody.reference || null;
+      updateRefUi();
       $('m-play').disabled = false;
       $('m-export').disabled = false;
       $('m-export-all').disabled = false;
@@ -3912,6 +4365,7 @@
     fillSelect($('m-rhythm'), Object.keys(RHYTHMS).map((k) => [k, RHYTHMS[k]]), 'Random');
     buildInstrumentPicker();
     buildVariationButtons();
+    initReference();
     document.querySelectorAll('input[name="m-mode"]').forEach((radio) => {
       radio.addEventListener('change', () => setMode(radio.value));
     });

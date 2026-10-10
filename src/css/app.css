@@ -199,6 +199,84 @@ h2 {
   display: none;
 }
 
+/* Uploaded MIDI reference */
+.ref-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin: 0 0 10px;
+  padding: 6px 8px;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+}
+
+.ref-bar.is-loaded {
+  border-style: solid;
+  border-color: rgba(157, 140, 255, 0.45);
+  background: var(--melody-soft);
+}
+
+.ref-bar.is-dragging {
+  border-color: var(--melody);
+  background: var(--melody-soft);
+}
+
+.file-btn {
+  display: inline-flex;
+  align-items: center;
+  position: relative;
+}
+
+.file-btn:focus-within {
+  outline: 2px solid var(--melody);
+  outline-offset: 2px;
+}
+
+.ref-info {
+  flex: 1 1 220px;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.ref-bar.is-loaded .ref-info {
+  color: var(--text);
+}
+
+.ref-info.is-error {
+  color: var(--danger);
+}
+
+.ref-inst {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.ref-inst[hidden] {
+  display: none;
+}
+
+.ref-inst select {
+  width: auto;
+  height: 26px;
+  font-size: 0.78rem;
+}
+
+.field.is-from-file > label::after,
+.field.is-from-file > .label::after {
+  content: "From file";
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--panel-2);
+  color: var(--text);
+  font-size: 0.66rem;
+  letter-spacing: 0.06em;
+}
+
 .panel-melody {
   border-top: 3px solid var(--melody);
 }
@@ -1136,7 +1214,9 @@ input[type="range"] {
     height: 32px;
   }
 
-  .snap-field select {
+  .snap-field select,
+  .ref-inst select {
+    height: 32px;
     font-size: 16px;
   }
 

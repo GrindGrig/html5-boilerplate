@@ -75,6 +75,15 @@
         </div>
       </fieldset>
 
+      <div class="ref-bar" id="m-ref-bar">
+        <label class="btn btn-xs file-btn" title="Write new parts that go with a MIDI file: its key, tempo, meter and chords are detected">
+          Upload MIDI…<input type="file" id="m-file" accept=".mid,.midi,audio/midi,audio/x-midi" class="visually-hidden">
+        </label>
+        <span class="ref-info" id="m-ref-info" aria-live="polite">or drop a .mid file here to generate parts that complement it.</span>
+        <label class="ref-inst" id="m-ref-inst-wrap" hidden>Plays as <select id="m-ref-inst"></select></label>
+        <button type="button" class="btn btn-xs btn-ghost" id="m-ref-clear" hidden>Remove</button>
+      </div>
+
       <form id="melody-form" class="controls" autocomplete="off">
         <div class="field" data-random-field>
           <label for="m-genre">Genre</label>
