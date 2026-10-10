@@ -70,6 +70,17 @@ jobs:
         run: |
           ./build/StudioTests_artefacts/Release/StudioTests plugin/Tests/state.json
 
+      - name: Check the Windows plugin needs no extra runtime
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $dll = Get-ChildItem -Recurse "build/MelodyDrumStudio_artefacts/Release/VST3" -Filter *.vst3 -File | Select-Object -First 1
+          $vs = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
+          $dumpbin = Get-ChildItem -Recurse "$vs\VC\Tools\MSVC" -Filter dumpbin.exe | Where-Object { $_.FullName -match 'Hostx64\\x64' } | Select-Object -First 1
+          $deps = & $dumpbin.FullName /dependents $dll.FullName
+          $deps
+          if ($deps -match 'MSVCP140|VCRUNTIME140') { throw "The plugin still depends on the Visual C++ runtime DLLs" }
+
       - name: Collect plugins
         shell: bash
         run: |
