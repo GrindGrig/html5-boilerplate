@@ -1062,8 +1062,67 @@
       reference: ref,
     });
     if (ref) complementLead(m);
-    buildParts(m);
+    m.feel = 'normal';
+    m.baseBars = bars;
+    m.baseChords = chords;
+    if (rawInput.feel && rawInput.feel !== 'normal') applyFeel(m, rawInput.feel);
+    else buildParts(m);
     return m;
+  }
+
+  // | Feel: half time stretches every note to twice its length (the song
+  // | spans twice as many bars) and double time squeezes them to half, at
+  // | the same BPM. The song's chords and length at normal feel are kept in
+  // | baseChords/baseBars, so switching back and forth loses nothing.
+
+  const FEEL_FACTOR = { half: 2, normal: 1, double: 0.5 };
+  const FEEL_LABEL = { half: 'Half time', normal: 'Normal', double: 'Double time' };
+
+  function ensureBase(m) {
+    if (!m.feel) m.feel = 'normal';
+    if (!m.baseChords) m.baseChords = m.chords;
+    if (!m.baseBars) m.baseBars = m.bars;
+  }
+
+  function chordsForFeel(m) {
+    const f = FEEL_FACTOR[m.feel];
+    const chords = [];
+    for (let bar = 0; bar < m.bars; bar++) {
+      // Half time: each chord lasts two bars. Double time: two chords share
+      // a bar, which is labelled with the first.
+      const src = f > 1 ? m.baseChords[Math.floor(bar / 2)] : f < 1 ? m.baseChords[Math.min(m.baseChords.length - 1, bar * 2)] : m.baseChords[bar];
+      chords.push(Object.assign({}, src, { bar }));
+    }
+    return chords;
+  }
+
+  function applyFeel(m, feel) {
+    ensureBase(m);
+    const ratio = FEEL_FACTOR[feel] / FEEL_FACTOR[m.feel];
+    const scale = (notes) => notes.forEach((n) => {
+      n.tick *= ratio;
+      n.dur *= ratio;
+    });
+    scale(m.notes);
+    Object.keys(m.edits || {}).forEach((id) => scale(m.edits[id]));
+    m.feel = feel;
+    m.bars = Math.max(1, Math.ceil(m.baseBars * FEEL_FACTOR[feel]));
+    m.totalTicks = m.bars * m.barTicks;
+    m.chords = chordsForFeel(m);
+    buildParts(m);
+  }
+
+  // A generated part at the current feel: written at normal feel, then
+  // stretched or squeezed like everything else.
+  function feelPartNotes(m, r) {
+    const f = FEEL_FACTOR[m.feel || 'normal'];
+    if (f === 1) return partNotes(m, r);
+    ensureGroove(m);
+    const base = Object.assign({}, m, {
+      chords: m.baseChords, bars: m.baseBars, totalTicks: m.baseBars * m.barTicks,
+      notes: m.notes.map((n) => Object.assign({}, n, { tick: n.tick / f, dur: n.dur / f })),
+    });
+    return partNotes(base, r).map((n) => Object.assign({}, n, { tick: n.tick * f, dur: n.dur * f }));
   }
 
   // ---------------------------------------------------------------------
@@ -1364,7 +1423,8 @@
     // An uploaded file plays as its own part, first.
     if (m.reference) roles = [{ id: 'source', role: 'source', instrument: m.reference.instrument }].concat(roles);
     m.edits = m.edits || {};
-    m.parts = roles.map((r) => Object.assign({}, r, { notes: r.role === 'lead' ? m.notes : (m.edits[r.id] || partNotes(m, r)) }));
+    ensureBase(m);
+    m.parts = roles.map((r) => Object.assign({}, r, { notes: r.role === 'lead' ? m.notes : (m.edits[r.id] || feelPartNotes(m, r)) }));
   }
 
   const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII'];
@@ -3278,6 +3338,7 @@
       instruments: genMode === 'ensemble' ? picker.selected.slice() : [],
       mode: genMode,
       reference,
+      feel: document.querySelector('input[name="m-feel"]:checked').value,
     };
   }
 
@@ -3595,6 +3656,7 @@
       [`${NOTE_NAMES[m.root]} ${SCALES[m.scale].name}`, r.root || r.scale],
       [`${m.bars} bars · ${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`, r.length],
       [RHYTHMS[m.rhythm] + (m.swing ? ' (swung)' : ''), r.rhythm],
+      ...(m.feel && m.feel !== 'normal' ? [[FEEL_LABEL[m.feel], false]] : []),
       [firstBars.map((c) => (m.mode === 'melody' ? c.name : `${c.name} (${romanNumeral(m, c)})`)).join(' – '), false],
     ];
     chips.forEach(([text, rolled]) => {
@@ -3644,7 +3706,11 @@
   const undoStack = [];
 
   function snapshot() {
-    return JSON.stringify({ notes: melody.notes, edits: melody.edits, root: melody.root, chords: melody.chords });
+    const m = melody;
+    return JSON.stringify({
+      notes: m.notes, edits: m.edits, root: m.root, chords: m.chords,
+      feel: m.feel, bars: m.bars, totalTicks: m.totalTicks, baseChords: m.baseChords,
+    });
   }
 
   function pushUndo() {
@@ -3660,9 +3726,41 @@
     melody.edits = prev.edits;
     melody.root = prev.root;
     melody.chords = prev.chords;
+    const resized = prev.bars !== undefined && prev.bars !== melody.bars;
+    if (prev.feel) {
+      Object.assign(melody, { feel: prev.feel, bars: prev.bars, totalTicks: prev.totalTicks, baseChords: prev.baseChords });
+      setFeelRadio(prev.feel);
+    }
     $('m-undo').disabled = !undoStack.length;
-    songChanged();
+    if (resized) lengthChanged();
+    else songChanged();
     drawRoll(null);
+  }
+
+  function setFeelRadio(feel) {
+    document.querySelectorAll('input[name="m-feel"]').forEach((r) => {
+      r.checked = r.value === feel;
+    });
+  }
+
+  // Switching the feel after generating re-times the current song.
+  function onFeelChanged(feel) {
+    if (!melody || melody.feel === feel) return;
+    pushUndo();
+    applyFeel(melody, feel);
+    lengthChanged();
+    drawRoll(null);
+  }
+
+  // After the song's length changed: redraw, and restart playback on the
+  // next downbeat so the loop takes the new length.
+  function lengthChanged() {
+    roll.span = null;
+    songChanged();
+    if (mp.playing && !IN_PLUGIN) {
+      const drumBeat = nextDrumDownbeat();
+      startMelody(drumBeat !== null ? drumBeat : audio.ctx.currentTime + 0.05);
+    }
   }
 
   const editPart = () => melody && melody.parts.find((p) => p.id === roll.editId);
@@ -3834,7 +3932,11 @@
     if (!melody) return;
     pushUndo();
     melody.root = mod(melody.root + semitones, 12);
-    melody.chords.forEach((c) => {
+    ensureBase(melody);
+    const shifted = new Set();
+    melody.chords.concat(melody.baseChords).forEach((c) => {
+      if (shifted.has(c)) return;
+      shifted.add(c);
       c.pcs = c.pcs.map((pc) => mod(pc + semitones, 12));
       c.name = chordName(c.pcs);
     });
@@ -4254,6 +4356,7 @@
       melody.edits = melody.edits || {};
       reference = melody.reference || null;
       updateRefUi();
+      setFeelRadio(melody.feel || 'normal');
       $('m-play').disabled = false;
       $('m-export').disabled = false;
       $('m-export-all').disabled = false;
@@ -4426,6 +4529,9 @@
     });
     $('m-reset').addEventListener('click', resetMelodyControls);
     $('m-undo').addEventListener('click', undo);
+    document.querySelectorAll('input[name="m-feel"]').forEach((r) => {
+      r.addEventListener('change', () => onFeelChanged(r.value));
+    });
     document.addEventListener('keydown', (e) => {
       if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z' && !/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)) {
         e.preventDefault();

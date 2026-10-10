@@ -132,6 +132,15 @@
           <select id="m-rhythm" name="rhythm"></select>
         </div>
 
+        <fieldset class="field segmented-field m-feel-field">
+          <legend>Feel</legend>
+          <div class="segmented segmented-modes" role="radiogroup" title="Half time stretches every note to twice its length (over twice as many bars) at the same BPM; double time squeezes them to half">
+            <label><input type="radio" name="m-feel" value="half"><span>Half time</span></label>
+            <label><input type="radio" name="m-feel" value="normal" checked><span>Normal</span></label>
+            <label><input type="radio" name="m-feel" value="double"><span>Double time</span></label>
+          </div>
+        </fieldset>
+
         <fieldset class="field field-instrument" data-random-field>
           <legend id="m-inst-legend">Instrument</legend>
           <div class="instrument-picker" id="m-instrument" role="group" aria-describedby="m-inst-info"></div>
