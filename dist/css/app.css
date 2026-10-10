@@ -35,8 +35,8 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--font);
-  font-size: 15px;
-  line-height: 1.45;
+  font-size: 14px;
+  line-height: 1.4;
 }
 
 h1,
@@ -62,8 +62,8 @@ h2 {
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 12px 24px;
-  padding: 14px 24px;
+  gap: 8px 20px;
+  padding: 8px 20px;
   border-bottom: 1px solid var(--line);
   background: #0c0e13;
   position: sticky;
@@ -78,8 +78,8 @@ h2 {
 }
 
 .brand-mark {
-  width: 32px;
-  height: 32px;
+  width: 24px;
+  height: 24px;
   fill: var(--melody);
 }
 
@@ -105,17 +105,17 @@ h2 {
 
 .layout {
   display: grid;
-  gap: 20px;
+  gap: 14px;
   max-width: 1280px;
   margin: 0 auto;
-  padding: 20px 24px 8px;
+  padding: 14px 20px 8px;
 }
 
 .panel {
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 20px;
+  border-radius: 12px;
+  padding: 14px 16px;
   min-width: 0;
 }
 
@@ -128,7 +128,11 @@ h2 {
 }
 
 .panel-head {
-  margin-bottom: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 12px;
+  margin-bottom: 10px;
 }
 
 .hint {
@@ -150,15 +154,15 @@ h2 {
 
 .controls {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
-  gap: 14px 16px;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px 12px;
   margin: 0;
 }
 
 .field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   min-width: 0;
   margin: 0;
   padding: 0;
@@ -172,7 +176,7 @@ h2 {
   align-items: center;
   gap: 8px;
   color: var(--muted);
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -180,7 +184,7 @@ h2 {
 }
 
 .field legend {
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .field.is-random > label::after,
@@ -204,14 +208,14 @@ input[type="number"],
 select {
   width: 100%;
   min-width: 0;
-  height: 36px;
-  padding: 0 10px;
+  height: 32px;
+  padding: 0 8px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--panel-2);
   color: var(--text);
   font: inherit;
-  font-size: 0.92rem;
+  font-size: 0.88rem;
 }
 
 input[type="number"]::placeholder {
@@ -279,17 +283,24 @@ input[type="range"] {
    ========================================================================== */
 
 .btn {
-  height: 36px;
-  padding: 0 14px;
+  height: 32px;
+  padding: 0 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--panel-2);
   color: var(--text);
   font: inherit;
-  font-size: 0.9rem;
+  font-size: 0.86rem;
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
+}
+
+.btn-xs {
+  height: 26px;
+  padding: 0 9px;
+  border-radius: 6px;
+  font-size: 0.78rem;
 }
 
 .btn:hover:not(:disabled) {
@@ -341,8 +352,8 @@ input[type="range"] {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px 12px;
-  margin-top: 18px;
+  gap: 8px 10px;
+  margin-top: 12px;
 }
 
 .actions .spacer {
@@ -413,7 +424,7 @@ input[type="range"] {
 
 .segmented {
   display: flex;
-  height: 36px;
+  height: 32px;
   border: 1px solid var(--line);
   border-radius: 8px;
   overflow: hidden;
@@ -509,7 +520,7 @@ input[type="range"] {
    ========================================================================== */
 
 .mode-field {
-  margin: 0 0 16px;
+  margin: 0 0 10px;
   padding: 0;
   border: 0;
   min-width: 0;
@@ -520,29 +531,50 @@ input[type="range"] {
   color: #13101f;
 }
 
+.piano-roll.is-tall {
+  height: 340px;
+}
+
+/* Parts legend: also picks the part to edit
+   ========================================================================== */
+
 .roll-legend {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px 16px;
+  gap: 4px;
   margin-top: 8px;
-  color: var(--muted);
-  font-size: 0.82rem;
 }
 
 .legend-item {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  height: 26px;
+  padding: 0 9px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.legend-item[aria-pressed="true"] {
+  border-color: var(--melody);
+  background: var(--melody-soft);
+  color: var(--text);
+}
+
+.legend-item:focus-visible {
+  outline: 2px solid var(--melody);
+  outline-offset: 1px;
 }
 
 .legend-item i {
-  width: 10px;
-  height: 10px;
+  width: 9px;
+  height: 9px;
   border-radius: 3px;
-}
-
-.piano-roll.is-tall {
-  height: 360px;
 }
 
 /* Instrument picker
@@ -553,61 +585,55 @@ input[type="range"] {
 }
 
 .instrument-picker {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(124px, 1fr));
-  gap: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
 }
 
 .inst {
-  display: flex;
-  min-width: 0;
-}
-
-.inst input {
-  position: absolute;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.inst span {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 1px;
-  min-width: 0;
-  min-height: 44px;
-  padding: 6px 10px;
+  position: relative;
+  height: 26px;
+  padding: 0 9px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 6px;
   background: var(--panel-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.78rem;
   cursor: pointer;
+  white-space: nowrap;
+  touch-action: manipulation;
 }
 
-.inst strong {
-  font-size: 0.86rem;
-  font-weight: 600;
-  overflow-wrap: anywhere;
-}
-
-.inst small {
-  color: var(--muted);
-  font-size: 0.72rem;
-  font-variant-numeric: tabular-nums;
-}
-
-.inst input:checked + span {
+.inst[aria-pressed="true"] {
   border-color: var(--melody);
   background: var(--melody-soft);
 }
 
-.inst input:focus-visible + span {
+.inst[data-order]:not([data-order=""])::after {
+  content: attr(data-order);
+  position: absolute;
+  top: -6px;
+  right: -5px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  border-radius: 999px;
+  background: var(--melody);
+  color: #13101f;
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 14px;
+  text-align: center;
+}
+
+.inst:focus-visible {
   outline: 2px solid var(--melody);
   outline-offset: 1px;
 }
 
 @media (hover: hover) {
-  .inst span:hover {
+  .inst:hover {
     border-color: #3b4360;
   }
 }
@@ -615,43 +641,35 @@ input[type="range"] {
 .inst-info {
   margin: 2px 0 0;
   color: var(--muted);
-  font-size: 0.82rem;
+  font-size: 0.78rem;
 }
 
-/* Rolled settings summary
+/* Song summary
    ========================================================================== */
 
 .rolled {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 16px;
-  min-height: 30px;
+  gap: 4px;
+  margin-top: 10px;
+  min-height: 24px;
 }
 
 .rolled-empty {
   margin: 0;
   color: var(--muted);
-  font-size: 0.9rem;
+  font-size: 0.86rem;
 }
 
 .chip {
   display: inline-flex;
   align-items: baseline;
   gap: 6px;
-  padding: 4px 10px;
+  padding: 2px 8px;
   border: 1px solid var(--line);
   border-radius: 999px;
   background: var(--panel-2);
-  font-size: 0.85rem;
-}
-
-.chip b {
-  color: var(--muted);
-  font-size: 0.7rem;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+  font-size: 0.78rem;
 }
 
 .chip.is-random {
@@ -659,68 +677,83 @@ input[type="range"] {
   background: var(--melody-soft);
 }
 
-.chip.is-random::after {
-  content: "rolled";
-  color: var(--melody);
-  font-size: 0.68rem;
-}
+/* Editing tools
+   ========================================================================== */
 
-.chip-lock {
+.edit-tools {
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  color: var(--text);
-  font: inherit;
-  font-size: 0.85rem;
-  cursor: pointer;
-  touch-action: manipulation;
+  gap: 6px 8px;
+  margin-top: 10px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #13161e;
 }
 
-.chip-lock svg {
-  width: 13px;
-  height: 13px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.6;
-  stroke-linecap: round;
+.edit-tools[hidden] {
+  display: none;
+}
+
+.segmented-sm {
+  height: 26px;
+  border-radius: 6px;
+}
+
+.segmented-sm span {
+  padding: 0 9px;
+  font-size: 0.78rem;
+}
+
+.segmented-sm input:checked + span {
+  background: var(--melody);
+  color: #13101f;
+}
+
+.snap-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   color: var(--muted);
-  flex: none;
+  font-size: 0.78rem;
 }
 
-.chip-lock.is-locked {
-  border-color: var(--melody);
-  background: var(--panel-2);
+.snap-field select {
+  height: 26px;
+  width: auto;
+  padding: 0 6px;
+  font-size: 0.78rem;
 }
 
-.chip-lock.is-locked svg {
-  color: var(--melody);
-}
-
-.chip-lock.is-locked svg rect {
-  fill: var(--melody);
-}
-
-.chip-lock:focus-visible {
-  outline: 2px solid var(--melody);
-  outline-offset: 2px;
-}
-
-@media (hover: hover) {
-  .chip-lock:hover {
-    border-color: var(--melody);
-  }
-}
-
-.lock-hint {
-  margin: 8px 0 0;
+.edit-label {
+  margin-left: 6px;
   color: var(--muted);
-  font-size: 0.82rem;
+  font-size: 0.78rem;
+}
+
+.variations {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.piano-roll[data-tool="edit"],
+.piano-roll[data-tool="erase"] {
+  touch-action: none;
+}
+
+.piano-roll[data-tool="erase"] {
+  cursor: not-allowed;
 }
 
 /* Piano roll
    ========================================================================== */
 
 .roll-wrap {
-  margin-top: 14px;
-  overflow-x: auto;
+  margin-top: 6px;
+  max-height: 440px;
+  overflow: auto;
   -webkit-overflow-scrolling: touch;
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -1015,12 +1048,21 @@ input[type="range"] {
     line-height: 1.15;
   }
 
-  .chip-lock {
-    min-height: 36px;
+  .inst,
+  .legend-item,
+  .btn-xs,
+  .segmented-sm,
+  .snap-field select {
+    height: 32px;
   }
 
-  .instrument-picker {
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  .snap-field select {
+    font-size: 16px;
+  }
+
+  .edit-label {
+    flex-basis: 100%;
+    margin-left: 0;
   }
 
   /* Sequencer: name + mute on one line, the steps below in two rows

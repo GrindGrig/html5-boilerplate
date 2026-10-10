@@ -38,6 +38,50 @@ int SoundEngine::patchIndex (const juce::String& name)
     return -1;
 }
 
+SoundEngine::Patch SoundEngine::builtInPatch (const juce::String& name)
+{
+    return patch (juce::jmax (0, patchIndex (name)));
+}
+
+SoundEngine::Patch SoundEngine::patchFromVar (const juce::var& v, Patch p)
+{
+    if (! v.isObject()) return p;
+    auto num = [&v] (const char* key, float& field)
+    {
+        const auto x = v[key];
+        if (x.isDouble() || x.isInt() || x.isInt64()) field = (float) (double) x;
+    };
+    auto wave = [&v] (const char* key, Wave& field)
+    {
+        const auto w = v[key].toString();
+        if (w == "sine") field = Wave::sine;
+        else if (w == "saw" || w == "sawtooth") field = Wave::saw;
+        else if (w == "square") field = Wave::square;
+        else if (w == "triangle") field = Wave::triangle;
+    };
+    wave ("wave1", p.wave1);
+    wave ("wave2", p.wave2);
+    num ("mix2", p.mix2); num ("ratio2", p.ratio2); num ("detune2", p.detune2); num ("partialDecay", p.partialDecay);
+    num ("attack", p.attack); num ("decay", p.decay); num ("sustain", p.sustain); num ("release", p.release);
+    num ("cutoffMul", p.cutoffMul); num ("cutoffMax", p.cutoffMax); num ("envAmount", p.envAmount); num ("envTime", p.envTime); num ("q", p.q);
+    num ("vibCents", p.vibCents); num ("vibRate", p.vibRate); num ("vibDelay", p.vibDelay);
+    num ("drive", p.drive); num ("noise", p.noise);
+    num ("fmRatio", p.fmRatio); num ("fmIndex", p.fmIndex); num ("fmDecay", p.fmDecay);
+    num ("level", p.level);
+
+    // Keep values in ranges the renderer handles.
+    p.attack = juce::jlimit (0.001f, 10.0f, p.attack);
+    p.decay = juce::jlimit (0.001f, 20.0f, p.decay);
+    p.sustain = juce::jlimit (0.0f, 1.0f, p.sustain);
+    p.release = juce::jlimit (0.001f, 20.0f, p.release);
+    p.envTime = juce::jmax (0.001f, p.envTime);
+    p.fmDecay = juce::jmax (0.01f, p.fmDecay);
+    p.q = juce::jlimit (0.1f, 20.0f, p.q);
+    p.cutoffMax = juce::jlimit (30.0f, 20000.0f, p.cutoffMax);
+    p.level = juce::jlimit (0.0f, 1.0f, p.level);
+    return p;
+}
+
 const SoundEngine::Patch& SoundEngine::patch (int index)
 {
     static const std::array<Patch, 16> patches = []
@@ -241,7 +285,7 @@ float SoundEngine::noise()
     return (float) ((double) rng / 2147483648.0 - 1.0);
 }
 
-void SoundEngine::noteOn (int patchIdx, int midiNote, float velocity, int delay, int gate)
+void SoundEngine::noteOn (const Patch& patch, int midiNote, float velocity, int delay, int gate)
 {
     // Free voice, else steal the oldest.
     Voice* target = nullptr;
@@ -257,14 +301,14 @@ void SoundEngine::noteOn (int patchIdx, int midiNote, float velocity, int delay,
     auto& v = *target;
     v = Voice {};
     v.active = true;
-    v.patch = &patch (patchIdx);
+    v.patch = patch;
     v.note = midiNote;
     v.velocity = velocity;
     v.delay = juce::jmax (0, delay);
     v.gate = juce::jmax (1, gate);
     v.freq = 440.0 * std::pow (2.0, (midiNote - 69) / 12.0);
     v.age = ++ageCounter;
-    v.env.start (*v.patch, sr);
+    v.env.start (v.patch, sr);
 }
 
 void SoundEngine::drumHit (int type, float velocity, int delay, int kit)
@@ -320,7 +364,7 @@ float SoundEngine::renderVoice (Voice& v)
 {
     if (v.delay > 0) { --v.delay; return 0.0f; }
 
-    const auto& p = *v.patch;
+    const auto& p = v.patch;
     if (v.gate > 0 && --v.gate == 0) v.env.noteOff();
 
     const auto env = v.env.next();

@@ -46,9 +46,11 @@ There is also a standalone app in each download for trying it without a DAW.
 4. To put the notes on your own tracks, drag **Drag song + drums MIDI** or
    **Drag drums MIDI** from the strip at the bottom of the window onto a
    track. The Download buttons save `.mid` files.
-5. To play your own instruments live, route the plugin's MIDI output: lead
-   on channel 1, chords 2, bass 3, backing chords 4, drums 10 (General MIDI
-   drum notes). Turn off **Built-in sound** to hear only your instruments.
+5. To play your own instruments live, route the plugin's MIDI output: each
+   part gets its own channel in the order the legend shows (channel 1, 2, 3 …,
+   skipping 10), backing chords take the next one, and drums are on channel 10
+   (General MIDI drum notes). Turn off **Built-in sound** to hear only your
+   instruments.
 
 Everything you set up is saved with the DAW project.
 

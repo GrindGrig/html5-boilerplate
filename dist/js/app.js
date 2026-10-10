@@ -84,81 +84,132 @@
   // Each instrument shapes the melody as well as the sound: `range` is a
   // comfortable playing range (MIDI notes), `leap` scales jump sizes,
   // `rest` adds breathing room, `gate` is how much of each note sounds
-  // (1 = legato), `rhythms` biases Random rhythm picks, and `program` is
-  // the General MIDI instrument used in exported files.
+  // (1 = legato), `rhythms` biases Random rhythm picks, `program` is the
+  // General MIDI instrument used in exported files, and `kind` decides its
+  // part in an ensemble (mono: melody lines, poly: chords, bass: bass line).
+  // `synth` names its sound in PATCHES.
   const INSTRUMENTS = {
-    piano: {
-      name: 'Piano', range: [48, 84], synth: 'piano', program: 0, leap: 1.1, rest: 0, gate: 0.9,
-      desc: 'Wide range and any rhythm.',
-    },
-    epiano: {
-      name: 'Electric piano', range: [48, 79], synth: 'keys', program: 4, leap: 1, rest: 0.02, gate: 0.9,
-      desc: 'Mellow keys with laid-back, syncopated phrasing.',
-      rhythms: [['syncopated', 2], ['sparse', 2], ['swing', 1]],
-    },
-    guitar: {
-      name: 'Acoustic guitar', range: [52, 81], synth: 'pluck', program: 25, leap: 1, rest: 0, gate: 0.8,
-      desc: 'Picked notes and broken chords.',
-      rhythms: [['arpeggio', 3], ['straight', 2], ['syncopated', 2], ['tresillo', 2]],
-    },
-    eguitar: {
-      name: 'Electric guitar', range: [52, 86], synth: 'eguitar', program: 29, leap: 1.1, rest: 0.03, gate: 0.85,
-      desc: 'Driven tone and punchy, riff-like rhythms.',
-      rhythms: [['syncopated', 3], ['straight', 2], ['dotted', 2], ['dense', 1]],
-    },
-    bass: {
-      name: 'Bass', range: [28, 55], synth: 'bass', program: 33, leap: 0.9, rest: 0.05, gate: 0.85,
-      desc: 'Low register, grooving around the chord roots.',
-      rhythms: [['syncopated', 3], ['straight', 3], ['sparse', 2], ['offbeat', 1]],
-    },
-    violin: {
-      name: 'Violin', range: [55, 88], synth: 'violin', program: 40, leap: 1.2, rest: 0.02, gate: 1,
-      desc: 'Singing, legato lines with vibrato.',
-      rhythms: [['sparse', 2], ['straight', 2], ['dotted', 2], ['triplet', 1]],
-    },
-    cello: {
-      name: 'Cello', range: [36, 67], synth: 'cello', program: 42, leap: 0.9, rest: 0.03, gate: 1,
-      desc: 'Warm, low and sustained.',
-      rhythms: [['sparse', 3], ['straight', 2], ['dotted', 1]],
-    },
-    flute: {
-      name: 'Flute', range: [60, 93], synth: 'flute', program: 73, leap: 1.1, rest: 0.08, gate: 0.95,
-      desc: 'Airy and agile, with room to breathe.',
-      rhythms: [['straight', 2], ['triplet', 2], ['sparse', 2], ['dense', 1]],
-    },
-    sax: {
-      name: 'Saxophone', range: [49, 81], synth: 'sax', program: 65, leap: 1.2, rest: 0.08, gate: 0.95,
-      desc: 'Reedy and expressive: swung, syncopated lines with breaths.',
-      rhythms: [['swing', 3], ['syncopated', 3], ['dotted', 1], ['triplet', 1]],
-    },
-    trumpet: {
-      name: 'Trumpet', range: [55, 82], synth: 'trumpet', program: 56, leap: 0.9, rest: 0.1, gate: 0.85,
-      desc: 'Bright and bold, in short phrases with breaths.',
-      rhythms: [['syncopated', 3], ['straight', 2], ['dotted', 2], ['offbeat', 1]],
-    },
-    marimba: {
-      name: 'Marimba', range: [48, 84], synth: 'marimba', program: 12, leap: 1, rest: 0, gate: 0.6,
-      desc: 'Woody mallets playing busy, rhythmic patterns.',
-      rhythms: [['dense', 3], ['arpeggio', 3], ['tresillo', 2], ['straight', 1]],
-    },
-    synth: {
-      name: 'Synth lead', range: [55, 86], synth: 'lead', program: 81, leap: 1, rest: 0, gate: 0.9,
-      desc: 'Cuts through a mix; any rhythm.',
-    },
-    pad: {
-      name: 'Synth pad', range: [48, 76], synth: 'pad', program: 89, leap: 0.8, rest: 0.05, gate: 1,
-      desc: 'Slow swells and long held notes.',
-      rhythms: [['sparse', 5], ['straight', 1]],
-    },
-    bells: {
-      name: 'Bells', range: [67, 96], synth: 'bell', program: 10, leap: 1.1, rest: 0.03, gate: 0.9,
-      desc: 'Glassy, high and ringing.',
-      rhythms: [['arpeggio', 2], ['sparse', 2], ['triplet', 1]],
-    },
+    piano: { name: 'Piano', kind: 'poly', range: [48, 84], synth: 'piano', program: 0, leap: 1.1, rest: 0, gate: 0.9 },
+    epiano: { name: 'E-piano', kind: 'poly', range: [48, 79], synth: 'keys', program: 4, leap: 1, rest: 0.02, gate: 0.9,
+      rhythms: [['syncopated', 2], ['sparse', 2], ['swing', 1]] },
+    organ: { name: 'Organ', kind: 'poly', range: [48, 84], synth: 'organ', program: 16, leap: 1, rest: 0.02, gate: 0.95,
+      rhythms: [['straight', 2], ['offbeat', 2], ['sparse', 1]] },
+    harpsichord: { name: 'Harpsichord', kind: 'poly', range: [41, 89], synth: 'harpsichord', program: 6, leap: 1.1, rest: 0, gate: 0.8,
+      rhythms: [['dense', 2], ['straight', 2], ['arpeggio', 2]] },
+    guitar: { name: 'Ac. guitar', kind: 'poly', range: [52, 81], synth: 'pluck', program: 25, leap: 1, rest: 0, gate: 0.8,
+      rhythms: [['arpeggio', 3], ['straight', 2], ['syncopated', 2], ['tresillo', 2]] },
+    eguitar: { name: 'E-guitar', kind: 'poly', range: [52, 86], synth: 'eguitar', program: 29, leap: 1.1, rest: 0.03, gate: 0.85,
+      rhythms: [['syncopated', 3], ['straight', 2], ['dotted', 2], ['dense', 1]] },
+    ukulele: { name: 'Ukulele', kind: 'poly', range: [60, 81], synth: 'ukulele', program: 24, leap: 1, rest: 0, gate: 0.75,
+      rhythms: [['straight', 2], ['syncopated', 2], ['arpeggio', 2]] },
+    harp: { name: 'Harp', kind: 'poly', range: [36, 91], synth: 'harp', program: 46, leap: 1.2, rest: 0, gate: 0.9,
+      rhythms: [['arpeggio', 4], ['sparse', 1], ['triplet', 1]] },
+    marimba: { name: 'Marimba', kind: 'poly', range: [48, 84], synth: 'marimba', program: 12, leap: 1, rest: 0, gate: 0.6,
+      rhythms: [['dense', 3], ['arpeggio', 3], ['tresillo', 2], ['straight', 1]] },
+    vibes: { name: 'Vibraphone', kind: 'poly', range: [53, 89], synth: 'vibes', program: 11, leap: 1.1, rest: 0.05, gate: 0.9,
+      rhythms: [['swing', 2], ['sparse', 2], ['arpeggio', 1]] },
+    kalimba: { name: 'Kalimba', kind: 'poly', range: [60, 88], synth: 'kalimba', program: 108, leap: 1, rest: 0.02, gate: 0.7,
+      rhythms: [['arpeggio', 3], ['straight', 2], ['syncopated', 1]] },
+    bells: { name: 'Bells', kind: 'poly', range: [67, 96], synth: 'bell', program: 10, leap: 1.1, rest: 0.03, gate: 0.9,
+      rhythms: [['arpeggio', 2], ['sparse', 2], ['triplet', 1]] },
+    strings: { name: 'Strings', kind: 'poly', range: [40, 86], synth: 'strings', program: 48, leap: 0.9, rest: 0.03, gate: 1,
+      rhythms: [['sparse', 4], ['straight', 1]] },
+    choir: { name: 'Choir', kind: 'poly', range: [48, 79], synth: 'choir', program: 52, leap: 0.8, rest: 0.05, gate: 1,
+      rhythms: [['sparse', 4], ['straight', 1]] },
+    pad: { name: 'Synth pad', kind: 'poly', range: [48, 76], synth: 'pad', program: 89, leap: 0.8, rest: 0.05, gate: 1,
+      rhythms: [['sparse', 5], ['straight', 1]] },
+    accordion: { name: 'Accordion', kind: 'poly', range: [53, 89], synth: 'accordion', program: 21, leap: 1, rest: 0.03, gate: 0.9,
+      rhythms: [['offbeat', 2], ['straight', 2], ['tresillo', 1]] },
+    violin: { name: 'Violin', kind: 'mono', range: [55, 88], synth: 'violin', program: 40, leap: 1.2, rest: 0.02, gate: 1,
+      rhythms: [['sparse', 2], ['straight', 2], ['dotted', 2], ['triplet', 1]] },
+    flute: { name: 'Flute', kind: 'mono', range: [60, 93], synth: 'flute', program: 73, leap: 1.1, rest: 0.08, gate: 0.95,
+      rhythms: [['straight', 2], ['triplet', 2], ['sparse', 2], ['dense', 1]] },
+    clarinet: { name: 'Clarinet', kind: 'mono', range: [50, 89], synth: 'clarinet', program: 71, leap: 1.1, rest: 0.07, gate: 0.95,
+      rhythms: [['straight', 2], ['swing', 2], ['dotted', 1]] },
+    oboe: { name: 'Oboe', kind: 'mono', range: [58, 91], synth: 'oboe', program: 68, leap: 1, rest: 0.07, gate: 0.95,
+      rhythms: [['sparse', 2], ['straight', 2], ['dotted', 1]] },
+    sax: { name: 'Saxophone', kind: 'mono', range: [49, 81], synth: 'sax', program: 65, leap: 1.2, rest: 0.08, gate: 0.95,
+      rhythms: [['swing', 3], ['syncopated', 3], ['dotted', 1], ['triplet', 1]] },
+    trumpet: { name: 'Trumpet', kind: 'mono', range: [55, 82], synth: 'trumpet', program: 56, leap: 0.9, rest: 0.1, gate: 0.85,
+      rhythms: [['syncopated', 3], ['straight', 2], ['dotted', 2], ['offbeat', 1]] },
+    horn: { name: 'French horn', kind: 'mono', range: [41, 77], synth: 'horn', program: 60, leap: 0.9, rest: 0.08, gate: 0.95,
+      rhythms: [['sparse', 3], ['dotted', 2], ['straight', 1]] },
+    trombone: { name: 'Trombone', kind: 'mono', range: [40, 72], synth: 'trombone', program: 57, leap: 0.8, rest: 0.1, gate: 0.9,
+      rhythms: [['syncopated', 2], ['sparse', 2], ['offbeat', 1]] },
+    harmonica: { name: 'Harmonica', kind: 'mono', range: [60, 84], synth: 'harmonica', program: 22, leap: 0.9, rest: 0.08, gate: 0.9,
+      rhythms: [['swing', 3], ['triplet', 2], ['dotted', 1]] },
+    steeldrum: { name: 'Steel drum', kind: 'mono', range: [55, 84], synth: 'steeldrum', program: 114, leap: 1, rest: 0.03, gate: 0.7,
+      rhythms: [['syncopated', 3], ['tresillo', 2], ['dense', 1]] },
+    synth: { name: 'Synth lead', kind: 'mono', range: [55, 86], synth: 'lead', program: 81, leap: 1, rest: 0, gate: 0.9 },
+    bass: { name: 'Bass', kind: 'bass', range: [28, 55], synth: 'bass', program: 33, leap: 0.9, rest: 0.05, gate: 0.85,
+      rhythms: [['syncopated', 3], ['straight', 3], ['sparse', 2], ['offbeat', 1]] },
+    upright: { name: 'Upright bass', kind: 'bass', range: [28, 55], synth: 'upright', program: 32, leap: 0.9, rest: 0.04, gate: 0.8,
+      rhythms: [['swing', 3], ['straight', 2], ['sparse', 1]] },
+    synthbass: { name: 'Synth bass', kind: 'bass', range: [24, 55], synth: 'synthbass', program: 38, leap: 0.9, rest: 0.05, gate: 0.8,
+      rhythms: [['syncopated', 3], ['offbeat', 2], ['dense', 1]] },
+    cello: { name: 'Cello', kind: 'bass', range: [36, 67], synth: 'cello', program: 42, leap: 0.9, rest: 0.03, gate: 1,
+      rhythms: [['sparse', 3], ['straight', 2], ['dotted', 1]] },
+    tuba: { name: 'Tuba', kind: 'bass', range: [28, 58], synth: 'tuba', program: 58, leap: 0.8, rest: 0.08, gate: 0.85,
+      rhythms: [['straight', 3], ['sparse', 2], ['offbeat', 1]] },
   };
+
+  // Sound recipes, shared with the plugin: the page sends this table to it,
+  // so a sound defined here plays the same in the browser and the VST3/AU.
+  // Two oscillators (wave1, wave2 at ratio2 and detune2 cents, mixed by
+  // mix2, fading over partialDecay seconds), an ADSR, a lowpass at
+  // note frequency * cutoffMul (capped at cutoffMax) that sweeps by
+  // (1 + envAmount * e^(-t/envTime)), vibrato, drive, breath noise and an
+  // optional FM modulator (fmRatio, fmIndex, fmDecay).
+  const PATCH_DEFAULTS = {
+    wave1: 'saw', wave2: 'saw', mix2: 0, ratio2: 1, detune2: 0, partialDecay: 0,
+    attack: 0.01, decay: 0.3, sustain: 0.7, release: 0.15,
+    cutoffMul: 100, cutoffMax: 16000, envAmount: 0, envTime: 0.2, q: 0.7,
+    vibCents: 0, vibRate: 5, vibDelay: 0.2, drive: 0, noise: 0,
+    fmRatio: 0, fmIndex: 0, fmDecay: 1, level: 0.15,
+  };
+
+  const PATCHES = {
+    piano: { wave1: 'triangle', wave2: 'sine', mix2: 0.35, ratio2: 2, partialDecay: 0.6, attack: 0.003, decay: 1.8, sustain: 0.02, release: 0.25, cutoffMul: 3, envAmount: 3, envTime: 0.35, level: 0.3 },
+    keys: { wave1: 'sine', wave2: 'triangle', mix2: 0.35, ratio2: 2, partialDecay: 0.4, attack: 0.005, decay: 1.2, sustain: 0.3, release: 0.3, level: 0.28 },
+    organ: { wave1: 'triangle', wave2: 'sine', mix2: 0.5, ratio2: 2, attack: 0.01, decay: 0.1, sustain: 1, release: 0.08, vibCents: 6, vibRate: 6.5, vibDelay: 0.01, level: 0.14 },
+    harpsichord: { wave1: 'saw', wave2: 'square', mix2: 0.3, ratio2: 2, attack: 0.002, decay: 0.9, sustain: 0.05, release: 0.2, cutoffMul: 6, envAmount: 2, envTime: 0.15, level: 0.14 },
+    pluck: { wave1: 'saw', wave2: 'triangle', mix2: 0.5, ratio2: 2, detune2: -5, attack: 0.004, decay: 0.35, sustain: 0.15, release: 0.15, cutoffMul: 1.5, envAmount: 6, envTime: 0.12, q: 1.4, level: 0.22 },
+    eguitar: { wave1: 'saw', wave2: 'square', mix2: 0.8, detune2: 5, drive: 3, attack: 0.005, decay: 0.3, sustain: 0.6, release: 0.15, cutoffMax: 2800, q: 1, level: 0.1 },
+    ukulele: { wave1: 'saw', wave2: 'triangle', mix2: 0.4, ratio2: 2, attack: 0.003, decay: 0.4, sustain: 0.1, release: 0.1, cutoffMul: 2, envAmount: 5, envTime: 0.08, level: 0.2 },
+    harp: { wave1: 'triangle', wave2: 'sine', mix2: 0.3, ratio2: 2, partialDecay: 0.3, attack: 0.002, decay: 1.5, sustain: 0.01, release: 0.4, level: 0.3 },
+    marimba: { wave1: 'sine', wave2: 'sine', mix2: 0.4, ratio2: 4, partialDecay: 0.08, attack: 0.002, decay: 0.6, sustain: 0.001, release: 0.1, level: 0.4 },
+    vibes: { wave1: 'sine', wave2: 'sine', mix2: 0.2, ratio2: 4, partialDecay: 0.1, attack: 0.002, decay: 2.2, sustain: 0.02, release: 0.6, vibCents: 4, vibRate: 5, vibDelay: 0.01, level: 0.3 },
+    kalimba: { wave1: 'sine', wave2: 'sine', mix2: 0.25, ratio2: 5.4, partialDecay: 0.05, attack: 0.002, decay: 0.9, sustain: 0.001, release: 0.1, level: 0.35 },
+    bell: { wave1: 'sine', fmRatio: 3.5, fmIndex: 2.2, fmDecay: 1, attack: 0.002, decay: 1.4, sustain: 0.06, release: 0.5, level: 0.24 },
+    strings: { wave1: 'saw', wave2: 'saw', mix2: 1, detune2: 14, attack: 0.3, decay: 0.4, sustain: 0.9, release: 0.5, cutoffMax: 3000, vibCents: 6, vibRate: 5, vibDelay: 0.3, level: 0.1 },
+    choir: { wave1: 'sine', wave2: 'triangle', mix2: 0.3, ratio2: 2, detune2: 6, noise: 0.02, attack: 0.25, decay: 0.3, sustain: 0.9, release: 0.4, cutoffMul: 3, vibCents: 8, vibRate: 5, level: 0.18 },
+    pad: { wave1: 'saw', wave2: 'saw', mix2: 1, detune2: 20, attack: 0.25, decay: 0.5, sustain: 0.8, release: 0.7, cutoffMul: 4, cutoffMax: 2400, level: 0.1 },
+    accordion: { wave1: 'saw', wave2: 'square', mix2: 0.7, detune2: 12, attack: 0.03, decay: 0.1, sustain: 0.95, release: 0.08, cutoffMul: 4, q: 1, vibCents: 6, vibRate: 6.5, vibDelay: 0.01, level: 0.1 },
+    violin: { wave1: 'saw', wave2: 'saw', mix2: 1, detune2: 9, attack: 0.08, decay: 0.2, sustain: 0.85, release: 0.2, cutoffMax: 3800, vibCents: 12, vibRate: 5.6, vibDelay: 0.25, level: 0.12 },
+    cello: { wave1: 'saw', wave2: 'saw', mix2: 1, detune2: 9, attack: 0.1, decay: 0.2, sustain: 0.85, release: 0.2, cutoffMax: 2000, vibCents: 10, vibRate: 5, vibDelay: 0.25, level: 0.16 },
+    flute: { wave1: 'sine', wave2: 'triangle', mix2: 0.25, noise: 0.05, attack: 0.06, decay: 0.1, sustain: 0.9, release: 0.12, cutoffMul: 4, vibCents: 8, vibRate: 5, vibDelay: 0.2, level: 0.2 },
+    clarinet: { wave1: 'square', attack: 0.04, decay: 0.1, sustain: 0.9, release: 0.1, cutoffMul: 4, q: 0.9, vibCents: 5, vibRate: 5, vibDelay: 0.3, level: 0.14 },
+    oboe: { wave1: 'saw', wave2: 'square', mix2: 0.5, attack: 0.03, decay: 0.1, sustain: 0.9, release: 0.1, cutoffMul: 6, q: 4, vibCents: 8, vibRate: 5.5, vibDelay: 0.25, level: 0.1 },
+    sax: { wave1: 'square', wave2: 'saw', mix2: 1, detune2: 6, attack: 0.03, decay: 0.15, sustain: 0.8, release: 0.1, cutoffMul: 5, cutoffMax: 6000, envAmount: -0.6, envTime: 0.03, q: 3, vibCents: 10, vibRate: 5, vibDelay: 0.3, level: 0.12 },
+    trumpet: { wave1: 'saw', wave2: 'saw', mix2: 1, detune2: 7, attack: 0.025, decay: 0.15, sustain: 0.8, release: 0.08, cutoffMul: 4, cutoffMax: 7000, envAmount: -0.6, envTime: 0.03, q: 2, vibCents: 6, vibRate: 5.5, vibDelay: 0.3, level: 0.12 },
+    horn: { wave1: 'saw', wave2: 'saw', mix2: 1, detune2: 6, attack: 0.06, decay: 0.2, sustain: 0.85, release: 0.2, cutoffMul: 2.5, cutoffMax: 2500, envAmount: -0.5, envTime: 0.06, vibCents: 4, vibRate: 5, vibDelay: 0.3, level: 0.14 },
+    trombone: { wave1: 'saw', wave2: 'saw', mix2: 1, detune2: 8, attack: 0.04, decay: 0.2, sustain: 0.85, release: 0.12, cutoffMul: 3, cutoffMax: 4000, envAmount: -0.6, envTime: 0.05, q: 1.5, level: 0.13 },
+    harmonica: { wave1: 'square', wave2: 'saw', mix2: 0.5, detune2: 4, noise: 0.02, attack: 0.03, decay: 0.1, sustain: 0.9, release: 0.08, cutoffMul: 3, q: 2.5, vibCents: 10, vibRate: 5.5, vibDelay: 0.2, level: 0.12 },
+    steeldrum: { wave1: 'sine', fmRatio: 2, fmIndex: 1.2, fmDecay: 0.4, attack: 0.002, decay: 0.9, sustain: 0.02, release: 0.3, level: 0.26 },
+    lead: { wave1: 'saw', wave2: 'square', mix2: 1, detune2: 8, attack: 0.01, decay: 0.2, sustain: 0.7, release: 0.12, cutoffMul: 3, cutoffMax: 9000, envAmount: 1.6, envTime: 0.25, q: 2, level: 0.14 },
+    bass: { wave1: 'sine', wave2: 'saw', mix2: 0.6, attack: 0.005, decay: 0.3, sustain: 0.6, release: 0.08, cutoffMul: 3, cutoffMax: 1600, envAmount: 1.5, envTime: 0.1, q: 2, level: 0.38 },
+    upright: { wave1: 'sine', wave2: 'triangle', mix2: 0.3, ratio2: 2, partialDecay: 0.25, attack: 0.005, decay: 0.6, sustain: 0.25, release: 0.12, level: 0.42 },
+    synthbass: { wave1: 'saw', wave2: 'square', mix2: 0.7, ratio2: 0.5, attack: 0.003, decay: 0.25, sustain: 0.5, release: 0.05, cutoffMul: 2.5, cutoffMax: 2000, envAmount: 4, envTime: 0.08, q: 3, level: 0.3 },
+    tuba: { wave1: 'saw', wave2: 'sine', mix2: 0.8, attack: 0.05, decay: 0.2, sustain: 0.8, release: 0.1, cutoffMul: 2, cutoffMax: 1200, level: 0.3 },
+    backing: { wave1: 'triangle', wave2: 'saw', mix2: 0.5, detune2: 7, attack: 0.05, decay: 0.6, sustain: 0.6, release: 0.3, cutoffMax: 1400, level: 0.06 },
+    backingBass: { wave1: 'sine', wave2: 'triangle', mix2: 1, attack: 0.01, decay: 0.4, sustain: 0.55, release: 0.15, level: 0.18 },
+  };
+
+  const patchFor = (name) => Object.assign({}, PATCH_DEFAULTS, PATCHES[name] || PATCHES.piano);
 
   const noteLabel = (midi) => NOTE_NAMES[mod(midi, 12)] + (Math.floor(midi / 12) - 1);
   const rangeLabel = (inst) => `${noteLabel(inst.range[0])}–${noteLabel(inst.range[1])}`;
+  const isKind = (key, kind) => INSTRUMENTS[key] && INSTRUMENTS[key].kind === kind;
 
   // Genre profiles drive every setting the user leaves on Random.
   const GENRES = {
@@ -171,7 +222,7 @@
         major: [[0, 4, 5, 3], [0, 5, 3, 4], [5, 3, 0, 4], [0, 3, 5, 4]],
         minor: [[0, 5, 2, 6], [0, 6, 5, 6], [0, 3, 5, 4]],
       },
-      instruments: [['piano', 3], ['guitar', 2], ['synth', 2], ['epiano', 1], ['bells', 1]],
+      instruments: [['piano', 3], ['guitar', 2], ['synth', 2], ['epiano', 1], ['bells', 1], ['ukulele', 1]],
       leap: 0.25, rest: 0.08,
     },
     rock: {
@@ -183,7 +234,7 @@
         major: [[0, 3, 4, 3], [0, 4, 3, 0], [0, 3, 0, 4]],
         minor: [[0, 5, 6, 0], [0, 6, 5, 6], [0, 3, 6, 0]],
       },
-      instruments: [['eguitar', 5], ['synth', 1], ['piano', 1]],
+      instruments: [['eguitar', 5], ['organ', 1], ['synth', 1], ['piano', 1]],
       leap: 0.3, rest: 0.08,
     },
     jazz: {
@@ -195,7 +246,7 @@
         major: [[1, 4, 0, 0], [0, 5, 1, 4], [2, 5, 1, 4], [0, 3, 1, 4]],
         minor: [[1, 4, 0, 0], [0, 3, 1, 4]],
       },
-      instruments: [['sax', 4], ['piano', 3], ['trumpet', 3], ['epiano', 2], ['flute', 1], ['bass', 1]],
+      instruments: [['sax', 4], ['piano', 3], ['trumpet', 3], ['epiano', 2], ['vibes', 2], ['clarinet', 1], ['trombone', 1], ['flute', 1]],
       leap: 0.45, rest: 0.1, sevenths: true, swing: { unit: 24, ratio: 0.66 },
     },
     blues: {
@@ -204,7 +255,7 @@
       rhythms: [['swing', 4], ['triplet', 4], ['dotted', 1]],
       meters: [['4/4', 8], ['12/8', 4]],
       prog: { major: [[0, 3, 0, 0], [0, 3, 0, 4], [4, 3, 0, 4]] },
-      instruments: [['eguitar', 3], ['sax', 2], ['piano', 2], ['trumpet', 1]],
+      instruments: [['eguitar', 3], ['harmonica', 3], ['sax', 2], ['organ', 2], ['piano', 2], ['trumpet', 1]],
       leap: 0.3, rest: 0.15, sevenths: true, swing: { unit: 24, ratio: 0.66 },
     },
     funk: {
@@ -213,7 +264,7 @@
       rhythms: [['syncopated', 6], ['dense', 2], ['offbeat', 2]],
       meters: [['4/4', 1]],
       prog: { major: [[0, 3, 0, 3], [0, 0, 3, 3]], minor: [[0, 3, 0, 3], [0, 6, 3, 0]] },
-      instruments: [['bass', 3], ['eguitar', 2], ['epiano', 2], ['sax', 1], ['synth', 1]],
+      instruments: [['eguitar', 2], ['epiano', 2], ['organ', 2], ['sax', 1], ['synth', 1], ['trumpet', 1]],
       leap: 0.3, rest: 0.18, sevenths: true, swing: { unit: 12, ratio: 0.56 },
     },
     hiphop: {
@@ -225,7 +276,7 @@
         major: [[0, 5, 3, 4]],
         minor: [[0, 5, 2, 6], [0, 3, 0, 4], [0, 5, 3, 4], [0, 0, 5, 5]],
       },
-      instruments: [['epiano', 3], ['piano', 2], ['bells', 2], ['flute', 1], ['bass', 1]],
+      instruments: [['epiano', 3], ['piano', 2], ['bells', 2], ['flute', 1], ['strings', 1]],
       leap: 0.25, rest: 0.2, sevenths: true, swing: { unit: 12, ratio: 0.58 },
     },
     trap: {
@@ -234,7 +285,7 @@
       rhythms: [['triplet', 3], ['sparse', 3], ['syncopated', 2], ['arpeggio', 2]],
       meters: [['4/4', 1]],
       prog: { major: [[0, 5, 3, 4]], minor: [[0, 5, 4, 0], [0, 5, 2, 4], [0, 0, 5, 6]] },
-      instruments: [['bells', 4], ['flute', 2], ['synth', 2], ['piano', 1]],
+      instruments: [['bells', 4], ['flute', 2], ['synth', 2], ['piano', 1], ['choir', 1]],
       leap: 0.3, rest: 0.25,
     },
     lofi: {
@@ -243,7 +294,7 @@
       rhythms: [['sparse', 3], ['syncopated', 3], ['swing', 2], ['dotted', 1]],
       meters: [['4/4', 1]],
       prog: { major: [[3, 2, 1, 0], [1, 4, 0, 5], [3, 4, 2, 5]], minor: [[0, 3, 6, 2], [1, 4, 0, 0]] },
-      instruments: [['epiano', 4], ['guitar', 2], ['piano', 2], ['bells', 1]],
+      instruments: [['epiano', 4], ['guitar', 2], ['piano', 2], ['vibes', 1], ['kalimba', 1]],
       leap: 0.3, rest: 0.2, sevenths: true, swing: { unit: 12, ratio: 0.6 },
     },
     edm: {
@@ -261,7 +312,7 @@
       rhythms: [['offbeat', 5], ['syncopated', 2], ['dotted', 1]],
       meters: [['4/4', 1]],
       prog: { major: [[0, 3, 0, 4], [0, 3, 4, 3], [0, 5, 3, 4]], minor: [[0, 3, 0, 3], [0, 6, 5, 6]] },
-      instruments: [['epiano', 2], ['guitar', 2], ['bass', 2], ['trumpet', 1], ['sax', 1]],
+      instruments: [['organ', 2], ['epiano', 2], ['guitar', 2], ['trumpet', 1], ['sax', 1], ['harmonica', 1]],
       leap: 0.25, rest: 0.15, swing: { unit: 12, ratio: 0.58 },
     },
     latin: {
@@ -270,7 +321,7 @@
       rhythms: [['tresillo', 6], ['syncopated', 3]],
       meters: [['4/4', 8], ['6/8', 2]],
       prog: { major: [[0, 4, 4, 0], [0, 3, 4, 0]], minor: [[0, 3, 4, 0], [0, 6, 5, 4]] },
-      instruments: [['guitar', 4], ['trumpet', 2], ['marimba', 2], ['flute', 1], ['piano', 1]],
+      instruments: [['guitar', 4], ['trumpet', 2], ['marimba', 2], ['steeldrum', 2], ['accordion', 1], ['flute', 1]],
       leap: 0.3, rest: 0.1,
     },
     classical: {
@@ -279,7 +330,7 @@
       rhythms: [['straight', 3], ['dotted', 2], ['arpeggio', 2], ['triplet', 1]],
       meters: [['4/4', 6], ['3/4', 5], ['2/4', 2], ['6/8', 2]],
       prog: { major: [[0, 3, 4, 0], [0, 5, 1, 4], [0, 1, 4, 0]], minor: [[0, 3, 4, 0], [0, 5, 3, 4]] },
-      instruments: [['piano', 4], ['violin', 4], ['cello', 2], ['flute', 2]],
+      instruments: [['piano', 4], ['violin', 4], ['strings', 2], ['flute', 2], ['clarinet', 2], ['oboe', 2], ['harp', 2], ['horn', 1], ['harpsichord', 1]],
       leap: 0.35, rest: 0.05,
     },
     ambient: {
@@ -288,7 +339,7 @@
       rhythms: [['sparse', 8], ['straight', 1]],
       meters: [['4/4', 5], ['3/4', 2], ['6/8', 2], ['5/4', 1]],
       prog: { major: [[0, 3, 0, 3], [0, 5, 3, 0]], minor: [[0, 5, 3, 6]] },
-      instruments: [['pad', 4], ['bells', 2], ['piano', 1], ['flute', 1]],
+      instruments: [['pad', 4], ['bells', 2], ['choir', 2], ['harp', 2], ['strings', 1], ['piano', 1], ['flute', 1]],
       leap: 0.4, rest: 0.25, sevenths: true,
     },
     prog: {
@@ -297,7 +348,7 @@
       rhythms: [['syncopated', 3], ['dense', 2], ['straight', 2], ['dotted', 1]],
       meters: [['7/8', 4], ['5/4', 3], ['7/4', 2], ['9/8', 1], ['11/8', 1], ['5/8', 1]],
       prog: { major: [[0, 1, 4, 5]], minor: [[0, 5, 6, 0], [0, 3, 5, 6]] },
-      instruments: [['eguitar', 3], ['synth', 3], ['bass', 1], ['piano', 1]],
+      instruments: [['eguitar', 3], ['synth', 3], ['organ', 1], ['piano', 1]],
       leap: 0.4, rest: 0.1,
     },
   };
@@ -313,61 +364,61 @@
       name: 'Happy', tempo: 1.1, leap: 1, rest: 0, register: 0,
       scales: [['major', 5], ['majorPentatonic', 4], ['lydian', 1], ['mixolydian', 1]],
       rhythms: [['straight', 3], ['syncopated', 3], ['offbeat', 2], ['dotted', 1]],
-      instruments: ['marimba', 'guitar', 'bells', 'flute'],
+      instruments: ['marimba', 'guitar', 'bells', 'flute', 'ukulele', 'steeldrum'],
     },
     sad: {
       name: 'Sad', tempo: 0.8, leap: 0.8, rest: 0.06, register: -5,
       scales: [['minor', 5], ['harmonicMinor', 2], ['dorian', 1], ['minorPentatonic', 1]],
       rhythms: [['sparse', 4], ['straight', 2], ['dotted', 2]],
-      instruments: ['piano', 'cello', 'violin'],
+      instruments: ['piano', 'cello', 'violin', 'oboe', 'strings'],
     },
     dark: {
       name: 'Dark', tempo: 0.9, leap: 1, rest: 0.05, register: -12,
       scales: [['phrygian', 4], ['harmonicMinor', 3], ['minor', 2]],
       rhythms: [['sparse', 3], ['syncopated', 2], ['triplet', 2]],
-      instruments: ['cello', 'synth', 'bass'],
+      instruments: ['cello', 'synth', 'choir', 'horn'],
     },
     dreamy: {
       name: 'Dreamy', tempo: 0.85, leap: 1.3, rest: 0.04, register: 5,
       scales: [['lydian', 5], ['majorPentatonic', 3], ['major', 1], ['dorian', 1]],
       rhythms: [['sparse', 3], ['arpeggio', 3], ['triplet', 2]],
-      instruments: ['pad', 'bells', 'epiano'],
+      instruments: ['pad', 'bells', 'epiano', 'harp', 'vibes', 'kalimba'],
     },
     calm: {
       name: 'Calm', tempo: 0.85, leap: 0.7, rest: 0.05, register: 0,
       scales: [['majorPentatonic', 5], ['major', 2], ['dorian', 1]],
       rhythms: [['sparse', 4], ['straight', 3]],
-      instruments: ['piano', 'guitar', 'flute'],
+      instruments: ['piano', 'guitar', 'flute', 'harp', 'kalimba'],
     },
     energetic: {
       name: 'Energetic', tempo: 1.15, leap: 1.1, rest: -0.05, register: 5,
       scales: [['minor', 2], ['major', 2], ['minorPentatonic', 2], ['mixolydian', 1]],
       rhythms: [['dense', 3], ['syncopated', 3], ['offbeat', 2], ['arpeggio', 2]],
-      instruments: ['synth', 'eguitar', 'trumpet'],
+      instruments: ['synth', 'eguitar', 'trumpet', 'organ'],
     },
     tense: {
       name: 'Tense', tempo: 1.05, leap: 1.4, rest: 0, register: 0,
       scales: [['harmonicMinor', 4], ['phrygian', 3], ['minor', 1]],
       rhythms: [['syncopated', 3], ['dense', 2], ['triplet', 2]],
-      instruments: ['violin', 'cello', 'synth'],
+      instruments: ['violin', 'cello', 'synth', 'strings'],
     },
     mysterious: {
       name: 'Mysterious', tempo: 0.9, leap: 1.2, rest: 0.05, register: 0,
       scales: [['dorian', 3], ['phrygian', 2], ['harmonicMinor', 2], ['lydian', 1]],
       rhythms: [['triplet', 3], ['sparse', 3], ['syncopated', 2]],
-      instruments: ['bells', 'flute', 'cello'],
+      instruments: ['bells', 'flute', 'cello', 'choir', 'vibes'],
     },
     romantic: {
       name: 'Romantic', tempo: 0.9, leap: 1.1, rest: 0.02, register: 0,
       scales: [['major', 3], ['minor', 2], ['harmonicMinor', 2]],
       rhythms: [['dotted', 3], ['triplet', 2], ['straight', 2]],
-      instruments: ['violin', 'piano', 'sax'],
+      instruments: ['violin', 'piano', 'sax', 'strings', 'harp'],
     },
     epic: {
       name: 'Epic', tempo: 1, leap: 1.3, rest: 0, register: 5,
       scales: [['minor', 4], ['harmonicMinor', 2], ['dorian', 1]],
       rhythms: [['dotted', 3], ['straight', 2], ['triplet', 2]],
-      instruments: ['trumpet', 'violin', 'cello'],
+      instruments: ['trumpet', 'horn', 'strings', 'choir', 'trombone'],
     },
   };
 
@@ -825,21 +876,34 @@
     const leadPick = () => weighted(blendWeights(g.instruments, md.instruments.map((k) => [k, 3])));
     let instrument;
     let chordInstrument;
+    let bassInstrument = autoBass(genre);
+    let ensemble = null;
     if (mode === 'chords') {
       chordInstrument = roll('instrument', input.instrument, () => pickChordInstrument(g, md));
       instrument = leadPick();
+    } else if (mode === 'ensemble') {
+      // Any number of instruments; Random picks a lead, chords and bass.
+      ensemble = input.instruments && input.instruments.length ? input.instruments.slice() : null;
+      if (!ensemble) {
+        rolled.instrument = true;
+        const lead = leadPick();
+        ensemble = [lead, pickChordInstrument(g, md, lead), bassInstrument];
+      }
+      const roles = ensembleRoles(ensemble);
+      instrument = roles[0].instrument;
+      chordInstrument = (roles.find((r) => r.role === 'chords') || {}).instrument || pickChordInstrument(g, md, instrument);
+      bassInstrument = (roles.find((r) => r.role === 'bass') || {}).instrument || bassInstrument;
     } else {
       instrument = roll('instrument', input.instrument, leadPick);
-      chordInstrument = input.chordInstrument || pickChordInstrument(g, md, instrument);
+      chordInstrument = pickChordInstrument(g, md, instrument);
     }
-    const bassInstrument = input.bassInstrument || (genre === 'classical' ? 'cello' : 'bass');
     const inst = INSTRUMENTS[mode === 'chords' ? chordInstrument : instrument];
     const rhythm = roll('rhythm', input.rhythm, () => {
       const base = blendWeights(g.rhythms, md.rhythms);
       return weighted(inst.rhythms ? blendWeights(base, inst.rhythms) : base);
     });
 
-    return { mode, genre, mood, bpm, num, den, root, scale, length, rhythm, instrument, chordInstrument, bassInstrument, rolled };
+    return { mode, genre, mood, bpm, num, den, root, scale, length, rhythm, instrument, chordInstrument, bassInstrument, ensemble, rolled };
   }
 
   function resolveSwing(settings, groups) {
@@ -975,9 +1039,6 @@
   // | Arrangement: chord and bass parts                                 |
   // ---------------------------------------------------------------------
 
-  // Instruments that can play a chord at once. Single-note instruments
-  // play the chords as broken chords instead.
-  const POLY = new Set(['piano', 'epiano', 'guitar', 'eguitar', 'marimba', 'synth', 'pad', 'bells']);
 
   // How the rhythmic pattern setting translates to chord comping and bass.
   const COMP_STYLE = {
@@ -991,8 +1052,44 @@
 
   function pickChordInstrument(g, md, avoid) {
     const entries = blendWeights(g.instruments, md.instruments.map((k) => [k, 3]))
-      .filter(([k]) => POLY.has(k) && k !== avoid);
+      .filter(([k]) => isKind(k, 'poly') && k !== avoid);
     return entries.length ? weighted(entries) : 'piano';
+  }
+
+  const BASS_BY_GENRE = { classical: 'cello', jazz: 'upright', blues: 'upright', funk: 'synthbass', edm: 'synthbass', trap: 'synthbass', hiphop: 'synthbass' };
+  const autoBass = (genre) => BASS_BY_GENRE[genre] || 'bass';
+
+  // Scale-degree helpers for parts and edits: index 0 is the tonic in the
+  // lowest octave, n (scale length) the tonic an octave up.
+  function midiToIdx(m, midi) {
+    const steps = SCALES[m.scale].steps;
+    const n = steps.length;
+    const rel = midi - m.root;
+    const octave = Math.floor(rel / 12);
+    const pc = mod(rel, 12);
+    let best = 0;
+    let bestDist = 99;
+    steps.concat([12]).forEach((st, i) => {
+      if (Math.abs(st - pc) < bestDist) {
+        bestDist = Math.abs(st - pc);
+        best = i;
+      }
+    });
+    return octave * n + best;
+  }
+
+  function idxToMidiOf(m, idx) {
+    const steps = SCALES[m.scale].steps;
+    const n = steps.length;
+    return m.root + 12 * Math.floor(idx / n) + steps[mod(idx, n)];
+  }
+
+  function fitRange(midi, key) {
+    const [low, high] = INSTRUMENTS[key].range;
+    let n = midi;
+    while (n < low) n += 12;
+    while (n > high) n -= 12;
+    return n < low ? low : n;
   }
 
   // Comping and bass rhythms are rolled once per song so the groove stays
@@ -1017,6 +1114,7 @@
       bassA,
       bassB: chance(0.5) ? bassA : varyRhythm(bassA),
       arpUnit: m.rhythm === 'dense' ? 12 : (m.rhythm === 'triplet' && tripletOk ? 16 : 24),
+      seed: randInt(1, 2147483646),
     };
     m.groove.compB[0].rest = comp === 'offbeat';
     m.groove.bassB[0].rest = false;
@@ -1049,14 +1147,15 @@
     return best;
   }
 
-  function chordPart(m) {
+  // style: 'comp' (rhythmic chords), 'arp' (broken chords) or 'pad' (held).
+  function chordPart(m, key, style) {
     ensureGroove(m);
-    const key = m.chordInstrument;
     const [ilo, ihi] = INSTRUMENTS[key].range;
     const lo = clamp(50, ilo, ihi - 16);
     const hi = Math.min(ihi, Math.max(lo + 17, 79));
     const strong = new Set(groupStarts(m.groups));
-    const broken = !POLY.has(key) || COMP_STYLE[m.rhythm] === 'arpeggio';
+    const poly = isKind(key, 'poly');
+    const broken = style === 'arp' || !poly || COMP_STYLE[m.rhythm] === 'arpeggio';
     const notes = [];
     let prev = null;
     m.chords.forEach((c, bar) => {
@@ -1064,7 +1163,11 @@
       prev = voicing;
       const base = bar * m.barTicks;
       const last = bar === m.chords.length - 1;
-      if (broken && !(last && POLY.has(key))) {
+      if (style === 'pad') {
+        voicing.forEach((midi) => notes.push({ tick: base, dur: m.barTicks, midi, vel: 0.6 }));
+        return;
+      }
+      if (broken && !(last && poly)) {
         const top = voicing[0] + 12 <= ihi ? [voicing[0] + 12] : [];
         const up = voicing.concat(top);
         const cycle = up.concat(up.slice(1, -1).reverse());
@@ -1086,9 +1189,9 @@
     return notes;
   }
 
-  function bassPart(m) {
+  function bassPart(m, key) {
     ensureGroove(m);
-    const [low, high] = INSTRUMENTS[m.bassInstrument].range;
+    const [low, high] = INSTRUMENTS[key].range;
     const style = BASS_STYLE[m.rhythm];
     const strong = new Set(groupStarts(m.groups));
     const rootOf = (pc) => {
@@ -1101,6 +1204,15 @@
       while (n < low) n += 12;
       return n;
     };
+    // Seeded per song, so the line stays the same when other parts are
+    // edited and only changes with the chords.
+    let seed = (m.groove.seed || 1) + key.length * 7919;
+    const rand = () => {
+      seed = (seed * 1103515245 + 12345) % 2147483648;
+      return seed / 2147483648;
+    };
+    const chanceS = (p) => rand() < p;
+    const pickS = (list) => list[Math.floor(rand() * list.length)];
     const notes = [];
     m.chords.forEach((c, bar) => {
       const base = bar * m.barTicks;
@@ -1127,23 +1239,98 @@
       played.forEach((it, i) => {
         let midi;
         if (it.start === 0) midi = root;
-        else if (i === played.length - 1 && nextRoot !== null && nextRoot !== root && chance(style === 'walking' ? 0.8 : 0.35)) midi = nextRoot + (nextRoot > root ? -1 : 1);
-        else if (style === 'walking') midi = pick([third, fifth, root + 12]);
-        else midi = strong.has(it.start) ? pick([fifth, root, root + 12]) : pick([root, root, fifth]);
+        else if (i === played.length - 1 && nextRoot !== null && nextRoot !== root && chanceS(style === 'walking' ? 0.8 : 0.35)) midi = nextRoot + (nextRoot > root ? -1 : 1);
+        else if (style === 'walking') midi = pickS([third, fifth, root + 12]);
+        else midi = strong.has(it.start) ? pickS([fifth, root, root + 12]) : pickS([root, root, fifth]);
         notes.push({ tick: base + it.start, dur: it.dur, midi: fit(midi), vel: it.start === 0 ? 0.9 : 0.74 });
       });
     });
     return notes;
   }
 
-  // The parts that play (and export) in the song's current mode.
+  // A second melody line a third (or sixth) below the lead, in the scale.
+  function harmonyPart(m, key, interval) {
+    return m.notes.map((n) => ({
+      tick: n.tick, dur: n.dur, midi: fitRange(idxToMidiOf(m, midiToIdx(m, n.midi) + interval), key), vel: n.vel * 0.85,
+    }));
+  }
+
+  // Held chord tones, one per beat group, moving as little as possible.
+  function counterPart(m, key) {
+    const [low, high] = INSTRUMENTS[key].range;
+    const notes = [];
+    let prev = Math.round((low + high) / 2);
+    m.chords.forEach((c, bar) => {
+      let pos = 0;
+      m.groups.forEach((len, gi) => {
+        if (gi % 2 === 0) {
+          const span = gi + 1 < m.groups.length ? len + m.groups[gi + 1] : len;
+          let best = prev;
+          let bestDist = 99;
+          for (let n = low; n <= high; n++) {
+            if (c.pcs.includes(mod(n, 12)) && Math.abs(n - prev) < bestDist && n !== prev) {
+              bestDist = Math.abs(n - prev);
+              best = n;
+            }
+          }
+          notes.push({ tick: bar * m.barTicks + pos, dur: span, midi: best, vel: 0.62 });
+          prev = best;
+        }
+        pos += len;
+      });
+    });
+    return notes;
+  }
+
+  const PART_NAMES = { lead: 'Lead', harmony: 'Harmony', counter: 'Counter-line', chords: 'Chords', arp: 'Arpeggio', pad: 'Pad', bass: 'Bass' };
+
+  // Gives each chosen instrument a part: the first melodic instrument plays
+  // the melody, further ones harmonise; chord instruments comp, then
+  // arpeggiate, then hold pads; low instruments play (and double) the bass.
+  const SUSTAINED = new Set(['strings', 'choir', 'pad', 'organ', 'accordion']);
+
+  function ensembleRoles(keys) {
+    const of = (kind) => keys.filter((k) => isKind(k, kind));
+    const lead = of('mono')[0] || of('poly')[0] || keys[0];
+    const roles = [{ id: 'lead', role: 'lead', instrument: lead }];
+    of('mono').filter((k) => k !== lead).forEach((k, i) => {
+      roles.push(i % 3 === 1 ?
+        { id: `counter${i}`, role: 'counter', instrument: k } :
+        { id: `harmony${i}`, role: 'harmony', instrument: k, interval: i % 3 === 2 ? -5 : -2 });
+    });
+    // The first chord instrument comps; after that, sustained ones hold
+    // pads and plucked or struck ones play arpeggios.
+    of('poly').filter((k) => k !== lead).forEach((k, i) => {
+      const role = i === 0 ? 'chords' : (SUSTAINED.has(k) ? 'pad' : 'arp');
+      roles.push({ id: i === 0 ? 'chords' : `${role}${i}`, role, instrument: k });
+    });
+    of('bass').filter((k) => k !== lead).forEach((k, i) => {
+      roles.push({ id: i === 0 ? 'bass' : `bass${i}`, role: 'bass', instrument: k });
+    });
+    return roles;
+  }
+
+  const PART_BUILDERS = {
+    lead: (m) => m.notes,
+    harmony: (m, r) => harmonyPart(m, r.instrument, r.interval),
+    counter: (m, r) => counterPart(m, r.instrument),
+    chords: (m, r) => chordPart(m, r.instrument, 'comp'),
+    arp: (m, r) => chordPart(m, r.instrument, 'arp'),
+    pad: (m, r) => chordPart(m, r.instrument, 'pad'),
+    bass: (m, r) => bassPart(m, r.instrument),
+  };
+
+  const partNotes = (m, r) => PART_BUILDERS[r.role](m, r);
+
+  // The parts that play (and export) in the song's current mode. Notes the
+  // user edited in the piano roll (m.edits, by part id) replace generated ones.
   function buildParts(m) {
-    m.parts = [];
-    if (m.mode !== 'chords') m.parts.push({ role: 'lead', instrument: m.instrument, notes: m.notes });
-    if (m.mode !== 'melody') {
-      m.parts.push({ role: 'chords', instrument: m.chordInstrument, notes: chordPart(m) });
-      m.parts.push({ role: 'bass', instrument: m.bassInstrument, notes: bassPart(m) });
-    }
+    let roles;
+    if (m.mode === 'melody') roles = [{ id: 'lead', role: 'lead', instrument: m.instrument }];
+    else if (m.mode === 'chords') roles = [{ id: 'chords', role: 'chords', instrument: m.chordInstrument }, { id: 'bass', role: 'bass', instrument: m.bassInstrument }];
+    else roles = ensembleRoles(m.ensemble && m.ensemble.length ? m.ensemble : [m.instrument, m.chordInstrument, m.bassInstrument]);
+    m.edits = m.edits || {};
+    m.parts = roles.map((r) => Object.assign({}, r, { notes: r.role === 'lead' ? m.notes : (m.edits[r.id] || partNotes(m, r)) }));
   }
 
   const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII'];
@@ -1353,128 +1540,60 @@
     return f;
   }
 
-  function playTone(midi, time, dur, vel, sound, dest) {
+  // Plays one note of a PATCHES recipe (the plugin's C++ engine follows the
+  // same recipe).
+  function playTone(midi, time, dur, vel, synthName, dest) {
     const ctx = audio.ctx;
+    const p = patchFor(synthName);
     const f = mtof(midi);
+    const waveType = (w) => (w === 'saw' ? 'sawtooth' : w);
     const amp = ctx.createGain();
     amp.connect(dest);
-    let end;
+    const end = envelope(amp.gain, time, dur, p.level * vel * 1.6, Math.max(0.002, p.attack), p.decay, Math.max(0.0005, p.sustain), p.release);
 
-    if (sound === 'piano') {
-      const filt = lowpass(Math.min(f * 12, 14000), 0, amp);
-      filt.frequency.setValueAtTime(Math.min(f * 12, 14000), time);
-      filt.frequency.exponentialRampToValueAtTime(Math.min(f * 3, 8000), time + 0.8);
-      end = envelope(amp.gain, time, dur, 0.3 * vel, 0.003, 1.8, 0.02, 0.25);
-      osc('triangle', f, time, end, filt);
-      const partials = ctx.createGain();
-      partials.connect(filt);
-      partials.gain.setValueAtTime(0.35, time);
-      partials.gain.exponentialRampToValueAtTime(0.01, time + 0.6);
-      osc('sine', f * 2, time, end, partials, 3);
-      osc('sine', f * 3, time, end, partials, -4);
-    } else if (sound === 'eguitar') {
-      const filt = lowpass(2800, 1, amp);
+    // Signal chain: oscillators -> (drive) -> (lowpass) -> amp
+    let input = amp;
+    const filtered = p.cutoffMul < 99 || p.cutoffMax < 15000;
+    if (filtered) {
+      const filt = lowpass(Math.min(f * p.cutoffMul, p.cutoffMax), p.q * 1.4, amp);
+      if (p.envAmount !== 0) {
+        const startCut = Math.max(30, Math.min(f * p.cutoffMul * (1 + p.envAmount), p.cutoffMax));
+        filt.frequency.setValueAtTime(startCut, time);
+        filt.frequency.setTargetAtTime(Math.min(f * p.cutoffMul, p.cutoffMax), time, Math.max(0.005, p.envTime));
+      }
+      input = filt;
+    }
+    if (p.drive > 0) {
       const shaper = ctx.createWaveShaper();
       shaper.curve = driveCurve();
-      shaper.connect(filt);
+      shaper.connect(input);
       const pre = ctx.createGain();
-      pre.gain.value = 0.6;
+      pre.gain.value = p.drive / 5;
       pre.connect(shaper);
-      end = envelope(amp.gain, time, dur, 0.1 * vel, 0.005, 0.3, 0.6, 0.15);
-      osc('sawtooth', f, time, end, pre);
-      osc('square', f * 1.003, time, end, pre);
-    } else if (sound === 'bass') {
-      const filt = lowpass(Math.min(f * 6, 1200), 2, amp);
-      filt.frequency.setValueAtTime(Math.min(f * 8, 1600), time);
-      filt.frequency.exponentialRampToValueAtTime(Math.min(f * 3, 700), time + 0.25);
-      end = envelope(amp.gain, time, dur, 0.38 * vel, 0.005, 0.3, 0.6, 0.08);
-      osc('sine', f, time, end, amp);
-      osc('sawtooth', f, time, end, filt);
-    } else if (sound === 'violin' || sound === 'cello') {
-      const cello = sound === 'cello';
-      const filt = lowpass(cello ? 2000 : 3800, 1, amp);
-      end = envelope(amp.gain, time, dur, (cello ? 0.16 : 0.12) * vel, cello ? 0.1 : 0.08, 0.2, 0.85, 0.2);
-      const a = osc('sawtooth', f, time, end, filt, -4);
-      const b = osc('sawtooth', f, time, end, filt, 5);
-      vibrato([a, b], f, time, end, cello ? 10 : 12, cello ? 5 : 5.6, 0.25);
-    } else if (sound === 'flute') {
-      end = envelope(amp.gain, time, dur, 0.2 * vel, 0.06, 0.1, 0.9, 0.12);
-      const a = osc('sine', f, time, end, amp);
-      const soft = ctx.createGain();
-      soft.gain.value = 0.25;
-      soft.connect(amp);
-      const b = osc('triangle', f, time, end, soft);
-      vibrato([a, b], f, time, end, 8, 5, 0.2);
-      noiseSource(time, end, filter('bandpass', f * 2, 2, decayGain(time, 0.05 * vel, Math.max(0.15, dur), amp)));
-    } else if (sound === 'sax') {
-      const filt = lowpass(f * 2, 3, amp);
-      filt.frequency.setValueAtTime(f * 2, time);
-      filt.frequency.linearRampToValueAtTime(Math.min(f * 5, 6000), time + 0.08);
-      end = envelope(amp.gain, time, dur, 0.12 * vel, 0.03, 0.15, 0.8, 0.1);
-      const a = osc('square', f, time, end, filt);
-      const b = osc('sawtooth', f, time, end, filt, 6);
-      vibrato([a, b], f, time, end, 10, 5, 0.3);
-    } else if (sound === 'trumpet') {
-      const filt = lowpass(f * 1.5, 2, amp);
-      filt.frequency.setValueAtTime(f * 1.5, time);
-      filt.frequency.exponentialRampToValueAtTime(Math.min(f * 7, 9000), time + 0.07);
-      filt.frequency.exponentialRampToValueAtTime(Math.min(f * 4, 7000), time + 0.3);
-      end = envelope(amp.gain, time, dur, 0.12 * vel, 0.025, 0.15, 0.8, 0.08);
-      const a = osc('sawtooth', f, time, end, filt);
-      const b = osc('sawtooth', f, time, end, filt, 7);
-      vibrato([a, b], f, time, end, 6, 5.5, 0.3);
-    } else if (sound === 'marimba') {
-      end = envelope(amp.gain, time, dur, 0.4 * vel, 0.002, 0.6, 0.001, 0.1);
-      osc('sine', f, time, end, amp);
-      osc('sine', f * 4, time, time + 0.12, decayGain(time, 0.25 * vel, 0.08, dest));
-    } else if (sound === 'lead') {
-      const filt = ctx.createBiquadFilter();
-      filt.type = 'lowpass';
-      filt.Q.value = 4;
-      filt.frequency.setValueAtTime(Math.min(f * 8, 12000), time);
-      filt.frequency.exponentialRampToValueAtTime(Math.min(f * 3 + 600, 9000), time + 0.25);
-      filt.connect(amp);
-      end = envelope(amp.gain, time, dur, 0.14 * vel, 0.01, 0.2, 0.7, 0.12);
-      osc('sawtooth', f, time, end, filt);
-      osc('square', f, time, end, filt, 8);
-    } else if (sound === 'pluck') {
-      const filt = ctx.createBiquadFilter();
-      filt.type = 'lowpass';
-      filt.Q.value = 2;
-      filt.frequency.setValueAtTime(Math.min(f * 10, 14000), time);
-      filt.frequency.exponentialRampToValueAtTime(f * 1.5, time + 0.3);
-      filt.connect(amp);
-      end = envelope(amp.gain, time, dur, 0.22 * vel, 0.004, 0.35, 0.15, 0.15);
-      osc('sawtooth', f, time, end, filt);
-      osc('triangle', f * 2, time, end, filt, -5);
-    } else if (sound === 'keys') {
-      end = envelope(amp.gain, time, dur, 0.28 * vel, 0.005, 1.2, 0.3, 0.3);
-      osc('sine', f, time, end, amp);
-      const bright = ctx.createGain();
-      bright.connect(amp);
-      bright.gain.setValueAtTime(0.35, time);
-      bright.gain.exponentialRampToValueAtTime(0.02, time + 0.4);
-      osc('triangle', f * 2, time, end, bright);
-      osc('sine', f * 4, time, end, bright, 4);
-    } else if (sound === 'bell') {
-      end = envelope(amp.gain, time, dur, 0.24 * vel, 0.002, 1.4, 0.06, 0.5);
-      const carrier = osc('sine', f, time, end, amp);
-      const modGain = ctx.createGain();
-      modGain.gain.setValueAtTime(f * 2.2, time);
-      modGain.gain.exponentialRampToValueAtTime(f * 0.1, time + 1);
-      modGain.connect(carrier.frequency);
-      osc('sine', f * 3.5, time, end, modGain);
-    } else {
-      // pad
-      const filt = ctx.createBiquadFilter();
-      filt.type = 'lowpass';
-      filt.frequency.value = Math.min(f * 4, 2400);
-      filt.connect(amp);
-      end = envelope(amp.gain, time, dur, 0.1 * vel, 0.25, 0.5, 0.8, 0.7);
-      osc('sawtooth', f, time, end, filt, -10);
-      osc('sawtooth', f, time, end, filt, 10);
-      osc('triangle', f / 2, time, end, filt);
+      input = pre;
     }
+
+    const oscs = [];
+    if (p.fmRatio > 0) {
+      const carrier = osc('sine', f, time, end, input);
+      const modGain = ctx.createGain();
+      modGain.gain.setValueAtTime(f * p.fmIndex, time);
+      modGain.gain.exponentialRampToValueAtTime(Math.max(1, f * 0.05), time + p.fmDecay);
+      modGain.connect(carrier.frequency);
+      osc('sine', f * p.fmRatio, time, end, modGain);
+      oscs.push(carrier);
+    } else {
+      oscs.push(osc(waveType(p.wave1), f, time, end, input));
+      if (p.mix2 > 0) {
+        const g2 = ctx.createGain();
+        g2.connect(input);
+        g2.gain.setValueAtTime(p.mix2, time);
+        if (p.partialDecay > 0) g2.gain.setTargetAtTime(0.0001, time, p.partialDecay);
+        oscs.push(osc(waveType(p.wave2), f * p.ratio2, time, end, g2, p.detune2));
+      }
+    }
+    if (p.vibCents > 0) vibrato(oscs, f, time, end, p.vibCents, p.vibRate, Math.max(0.01, p.vibDelay));
+    if (p.noise > 0) noiseSource(time, end, filter('bandpass', Math.min(f * 2, 12000), 2, decayGain(time, p.noise * 2, Math.max(0.15, dur), input)));
   }
 
   function playChord(chord, time, dur, dest, withBass) {
@@ -1956,18 +2075,23 @@
   }
 
   // Chord parts stack several voices, so each sounds softer.
-  const ROLE_LEVEL = { lead: 1, chords: 0.55, bass: 0.9 };
+  const ROLE_LEVEL = { lead: 1, harmony: 0.75, counter: 0.7, chords: 0.55, arp: 0.65, pad: 0.45, bass: 0.9 };
+
+  // MIDI channel (1-16) for each part in order, skipping drum channel 10;
+  // melody mode's backing chords take the next free one.
+  const PART_CHANNELS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 14, 15, 16];
+  const partChannel = (i) => PART_CHANNELS[Math.min(i, PART_CHANNELS.length - 1)];
 
   function melodyEvents(m) {
     const spt = (60 / (m.bpm * TPQ)) * m.tickScale;
     const events = [];
-    m.parts.forEach((part) => {
+    m.parts.forEach((part, pi) => {
       const inst = INSTRUMENTS[part.instrument];
       part.notes.forEach((n) => {
         const start = swingTick(n.tick, m.swing) * spt;
         const end = swingTick(n.tick + n.dur, m.swing) * spt;
         events.push({
-          type: 'note', role: part.role, synth: inst.synth, time: start,
+          type: 'note', role: part.role, synth: inst.synth, channel: partChannel(pi), time: start,
           dur: (end - start) * inst.gate * 0.97, midi: n.midi, vel: n.vel * ROLE_LEVEL[part.role],
         });
       });
@@ -2033,7 +2157,7 @@
       if (ev.type === 'note') {
         if (!(ev.role === 'bass' && melody.mode === 'chords' && !$('m-chords').checked)) playTone(ev.midi, t, ev.dur, ev.vel, ev.synth, mp.out);
       }
-      else if ($('m-chords').checked) playChord(ev.chord, t, ev.dur, mp.out, melody.instrument !== 'bass');
+      else if ($('m-chords').checked) playChord(ev.chord, t, ev.dur, mp.out, !isKind(melody.instrument, 'bass'));
       mp.idx++;
     }
   }
@@ -2277,18 +2401,16 @@
       { tick: 0, bytes: [0xff, 0x59, 0x02, sf & 255, scale.minor ? 1 : 0] },
     ];
 
-    const ROLE_NAMES = { lead: 'Melody', chords: 'Chords', bass: 'Bass' };
-    const CHANNELS = { lead: 0, chords: 1, bass: 2 };
-    const tracks = m.parts.map((part) => {
+    const tracks = m.parts.map((part, pi) => {
       const inst = INSTRUMENTS[part.instrument];
-      const ch = CHANNELS[part.role];
+      const ch = partChannel(pi) - 1;
       let track = [
-        { tick: 0, bytes: textEvent(0x03, `${ROLE_NAMES[part.role]} - ${inst.name}`) },
+        { tick: 0, bytes: textEvent(0x03, `${PART_NAMES[part.role]} - ${inst.name}`) },
         { tick: 0, bytes: [0xc0 | ch, inst.program] },
       ];
       part.notes.forEach((n) => {
         const start = at(n.tick);
-        const vel = Math.round(n.vel * (part.role === 'chords' ? 90 : 110));
+        const vel = Math.round(clamp(n.vel * (['chords', 'pad', 'arp'].includes(part.role) ? 90 : 110), 1, 127));
         track = track.concat(noteEvents(ch, start, Math.max(1, Math.round((at(n.tick + n.dur) - start) * inst.gate * 0.97)), n.midi, vel));
       });
       return track;
@@ -2303,9 +2425,9 @@
         c.pcs.forEach((pc) => {
           let note = 48 + pc;
           while (note < 48 + c.pcs[0]) note += 12;
-          chords = chords.concat(noteEvents(1, start, dur, note, 70));
+          chords = chords.concat(noteEvents(partChannel(m.parts.length) - 1, start, dur, note, 70));
         });
-        if (m.instrument !== 'bass') chords = chords.concat(noteEvents(1, start, dur, 36 + c.pcs[0], 85));
+        if (!isKind(m.instrument, 'bass')) chords = chords.concat(noteEvents(partChannel(m.parts.length) - 1, start, dur, 36 + c.pcs[0], 85));
       });
       tracks.push(chords);
     }
@@ -2380,10 +2502,9 @@
   // | Piano roll                                                        |
   // ---------------------------------------------------------------------
 
-  const roll = { canvas: null, ctx: null, cache: null, w: 0, h: 0, touchedAt: 0 };
+  const roll = { canvas: null, ctx: null, cache: null, w: 0, h: 0, touchedAt: 0, editId: 'lead', tool: 'scroll', snap: 12, layout: null, drag: null };
   const BLACK = new Set([1, 3, 6, 8, 10]);
   const CHORD_LANE = 22;
-  const ROLE_COLORS = { lead: '157, 140, 255', chords: '62, 207, 178', bass: '90, 169, 255' };
 
   // Narrow screens scroll the roll sideways instead of squashing the notes.
   // Very long songs (huge bars) get fewer pixels per beat so the canvas
@@ -2391,10 +2512,19 @@
   const ROLL_PX_PER_QUARTER = 16;
   const ROLL_MAX_WIDTH = 16000;
 
+  // Rows stay tall enough to click; a wide ensemble scrolls up and down.
+  const ROLL_MIN_ROW = 7;
+
   function sizeRoll() {
     const c = roll.canvas;
     const minW = melody ? Math.min(ROLL_MAX_WIDTH, (melody.totalTicks / TPQ) * ROLL_PX_PER_QUARTER) : 0;
     c.style.width = `${Math.max(c.parentElement.clientWidth, Math.ceil(minW))}px`;
+    c.style.height = '';
+    if (melody) {
+      const span = pitchSpan();
+      const needed = CHORD_LANE + (span.maxP - span.minP + 1) * ROLL_MIN_ROW;
+      if (needed > c.clientHeight) c.style.height = `${Math.ceil(needed)}px`;
+    }
     const rect = c.getBoundingClientRect();
     // Stay inside canvas limits (iOS Safari allows about 16 million pixels).
     const dpr = Math.max(0.25, Math.min(window.devicePixelRatio || 1, 32000 / Math.max(1, rect.width), Math.sqrt(16e6 / Math.max(1, rect.width * rect.height))));
@@ -2408,13 +2538,36 @@
     drawRoll(null);
   }
 
-  function rollLayout() {
-    const m = melody;
+  // The visible pitch range covers every part plus some room to drag notes
+  // into; it stays put while a note is being dragged.
+  // The range stays put while editing (so rows don't jump under the
+  // pointer) unless a note moves outside it.
+  function pitchSpan() {
     const pitches = [];
-    m.parts.forEach((part) => part.notes.forEach((n) => pitches.push(n.midi)));
-    const minP = Math.min.apply(null, pitches) - 2;
-    const maxP = Math.max.apply(null, pitches) + 2;
-    return { minP, maxP, rowH: (roll.h - CHORD_LANE) / (maxP - minP + 1), xPerTick: roll.w / m.totalTicks };
+    melody.parts.forEach((part) => part.notes.forEach((n) => pitches.push(n.midi)));
+    if (!pitches.length) pitches.push(60);
+    const kept = roll.span;
+    if (kept && pitches.every((pp) => pp >= kept.minP && pp <= kept.maxP)) return kept;
+    let minP = Math.min.apply(null, pitches) - 3;
+    let maxP = Math.max.apply(null, pitches) + 3;
+    if (maxP - minP < 24) {
+      const extra = 24 - (maxP - minP);
+      minP -= Math.floor(extra / 2);
+      maxP += Math.ceil(extra / 2);
+    }
+    if (kept) {
+      minP = Math.min(minP, kept.minP);
+      maxP = Math.max(maxP, kept.maxP);
+    }
+    roll.span = { minP, maxP };
+    return roll.span;
+  }
+
+  function rollLayout() {
+    if (roll.drag && roll.layout) return roll.layout;
+    const { minP, maxP } = pitchSpan();
+    roll.layout = { minP, maxP, rowH: (roll.h - CHORD_LANE) / (maxP - minP + 1), xPerTick: roll.w / melody.totalTicks };
+    return roll.layout;
   }
 
   function renderRollCache() {
@@ -2468,20 +2621,30 @@
       }
     });
 
-    // Notes, lead drawn last so it stays on top
-    const order = { chords: 0, bass: 1, lead: 2 };
-    m.parts.slice().sort((a, b) => order[a.role] - order[b.role]).forEach((part) => {
-      const rgb = ROLE_COLORS[part.role];
+    // Notes; the part being edited is drawn last, on top, and the others
+    // fade back while editing.
+    const editing = roll.tool !== 'scroll';
+    const indexed = m.parts.map((part, i) => [part, i]);
+    indexed.sort((a, b) => (a[0].id === roll.editId) - (b[0].id === roll.editId));
+    indexed.forEach(([part, i]) => {
+      const rgb = partColor(i);
+      const active = part.id === roll.editId;
+      const fade = editing && !active ? 0.3 : 1;
       part.notes.forEach((n) => {
         const x = n.tick * L.xPerTick;
         const w = Math.max(2, n.dur * L.xPerTick - 1.5);
         const top = y(n.midi) + 1;
         const h = Math.max(2, L.rowH - 2);
-        g.fillStyle = `rgba(${rgb}, ${0.55 + n.vel * 0.45})`;
+        g.fillStyle = `rgba(${rgb}, ${(0.55 + n.vel * 0.45) * fade})`;
         g.beginPath();
         if (g.roundRect) g.roundRect(x, top, w, h, Math.min(3, h / 2));
         else g.rect(x, top, w, h);
         g.fill();
+        if (editing && active) {
+          g.strokeStyle = 'rgba(255, 255, 255, 0.55)';
+          g.lineWidth = 1;
+          g.stroke();
+        }
       });
     });
     roll.cache = off;
@@ -2516,6 +2679,15 @@
     }
   }
 
+  // Scrolls a tall roll so a part's notes are in view.
+  function centerRollOn(part) {
+    const wrap = roll.canvas.parentElement;
+    if (!part || !part.notes.length || wrap.scrollHeight <= wrap.clientHeight) return;
+    const L = rollLayout();
+    const mid = part.notes.reduce((sum, n) => sum + n.midi, 0) / part.notes.length;
+    wrap.scrollTop = Math.max(0, CHORD_LANE + (L.maxP - mid) * L.rowH - wrap.clientHeight / 2);
+  }
+
   // Keeps the playhead visible when the roll scrolls, unless the user has
   // just scrolled it themselves.
   function followPlayhead(x) {
@@ -2524,6 +2696,173 @@
     if (x < wrap.scrollLeft + 16 || x > wrap.scrollLeft + wrap.clientWidth - 48) {
       wrap.scrollLeft = Math.max(0, x - 32);
     }
+  }
+
+  // | Editing on the roll: Edit adds, moves and resizes notes of the part
+  // | picked in the legend; Erase deletes them; Scroll leaves the roll alone
+  // | so it scrolls on touch screens.
+
+  function setRollTool(tool) {
+    roll.tool = tool;
+    document.querySelectorAll('input[name="m-tool"]').forEach((r) => {
+      r.checked = r.value === tool;
+    });
+    roll.canvas.dataset.tool = tool;
+    roll.cache = null;
+    drawRoll(null);
+  }
+
+  function rollPoint(e) {
+    const rect = roll.canvas.getBoundingClientRect();
+    const L = rollLayout();
+    const x = e.clientX - rect.left;
+    const yPos = e.clientY - rect.top;
+    return {
+      x, y: yPos, tick: x / L.xPerTick,
+      pitch: Math.round(L.maxP - (yPos - CHORD_LANE - L.rowH / 2) / L.rowH),
+      inLane: yPos < CHORD_LANE,
+    };
+  }
+
+  // The notes array to change for a part: the melody itself for the lead,
+  // otherwise the part's own edited copy (made on the first edit).
+  function editableNotes(part) {
+    if (part.role === 'lead') return melody.notes;
+    if (!melody.edits[part.id]) melody.edits[part.id] = part.notes.map((n) => Object.assign({}, n));
+    part.notes = melody.edits[part.id];
+    return part.notes;
+  }
+
+  function hitNote(notes, pt) {
+    const L = rollLayout();
+    for (let i = notes.length - 1; i >= 0; i--) {
+      const n = notes[i];
+      if (n.midi !== pt.pitch) continue;
+      const x0 = n.tick * L.xPerTick;
+      const x1 = (n.tick + n.dur) * L.xPerTick;
+      if (pt.x >= x0 - 2 && pt.x <= x1 + 2) return { note: n, nearEnd: pt.x > x1 - Math.min(8, (x1 - x0) / 3) };
+    }
+    return null;
+  }
+
+  const snapTick = (t) => Math.round(t / roll.snap) * roll.snap;
+  const floorSnap = (t) => Math.floor(t / roll.snap) * roll.snap;
+
+  function rollEdited() {
+    roll.cache = null;
+    drawRoll(null);
+  }
+
+  function deleteNote(notes, note) {
+    pushUndo();
+    notes.splice(notes.indexOf(note), 1);
+    songChanged();
+    drawRoll(null);
+  }
+
+  function onRollPointerDown(e) {
+    if (!melody || roll.tool === 'scroll' || e.button > 0 && e.button !== 2) return;
+    const part = editPart();
+    if (!part) return;
+    const pt = rollPoint(e);
+    if (pt.inLane) return;
+    e.preventDefault();
+    const notes = editableNotes(part);
+    const hit = hitNote(notes, pt);
+    if (roll.tool === 'erase' || e.button === 2) {
+      if (hit) deleteNote(notes, hit.note);
+      return;
+    }
+    pushUndo();
+    let note;
+    let mode;
+    if (hit) {
+      note = hit.note;
+      mode = hit.nearEnd ? 'resize' : 'move';
+    } else {
+      const tick = clamp(floorSnap(pt.tick), 0, melody.totalTicks - roll.snap);
+      note = { tick, dur: roll.snap, midi: clamp(pt.pitch, 0, 127), vel: 0.8 };
+      notes.push(note);
+      mode = 'resize';
+      previewNote(note, part);
+    }
+    roll.drag = { note, notes, part, mode, startPt: pt, orig: Object.assign({}, note), moved: !hit };
+    roll.canvas.setPointerCapture(e.pointerId);
+    rollEdited();
+  }
+
+  function onRollPointerMove(e) {
+    const pt = rollPoint(e);
+    const d = roll.drag;
+    if (!d) {
+      if (melody && roll.tool === 'edit' && editPart()) {
+        const hit = hitNote(editPart().notes, pt);
+        roll.canvas.style.cursor = hit ? (hit.nearEnd ? 'ew-resize' : 'grab') : 'crosshair';
+      }
+      return;
+    }
+    const n = d.note;
+    if (d.mode === 'move') {
+      const dt = snapTick(pt.tick - d.startPt.tick);
+      const tick = clamp(d.orig.tick + dt, 0, melody.totalTicks - n.dur);
+      const midi = clamp(d.orig.midi + (pt.pitch - d.startPt.pitch), 0, 127);
+      if (tick !== n.tick || midi !== n.midi) {
+        if (midi !== n.midi) previewNote(Object.assign({}, n, { midi }), d.part);
+        n.tick = tick;
+        n.midi = midi;
+        d.moved = true;
+      }
+    } else {
+      const end = clamp(Math.ceil(pt.tick / roll.snap) * roll.snap, n.tick + roll.snap, melody.totalTicks);
+      if (end - n.tick !== n.dur) {
+        n.dur = end - n.tick;
+        d.moved = true;
+      }
+    }
+    rollEdited();
+  }
+
+  function onRollPointerUp() {
+    const d = roll.drag;
+    if (!d) return;
+    roll.drag = null;
+    if (!d.moved) undoStack.pop();
+    $('m-undo').disabled = !undoStack.length;
+    d.notes.sort((a, b) => a.tick - b.tick || a.midi - b.midi);
+    songChanged();
+    drawRoll(null);
+  }
+
+  // Plays a picked or moved note so you hear what you are placing.
+  function previewNote(n, part) {
+    if (!audio.ctx || IN_PLUGIN) return;
+    resumeAudio();
+    playTone(n.midi, audio.ctx.currentTime + 0.01, 0.25, 0.7, INSTRUMENTS[part.instrument].synth, audio.melodyBus);
+  }
+
+  function initRollEditing() {
+    const c = roll.canvas;
+    c.addEventListener('pointerdown', onRollPointerDown);
+    c.addEventListener('pointermove', onRollPointerMove);
+    c.addEventListener('pointerup', onRollPointerUp);
+    c.addEventListener('pointercancel', onRollPointerUp);
+    c.addEventListener('contextmenu', (e) => {
+      if (roll.tool !== 'scroll') e.preventDefault();
+    });
+    c.addEventListener('dblclick', (e) => {
+      if (!melody || roll.tool !== 'edit' || !editPart()) return;
+      const notes = editableNotes(editPart());
+      const hit = hitNote(notes, rollPoint(e));
+      if (hit) deleteNote(notes, hit.note);
+    });
+    document.querySelectorAll('input[name="m-tool"]').forEach((r) => {
+      r.addEventListener('change', () => setRollTool(r.value));
+    });
+    $('m-snap').addEventListener('change', (e) => {
+      roll.snap = Number(e.target.value);
+    });
+    const coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+    setRollTool(coarse ? 'scroll' : 'edit');
   }
 
   function draw() {
@@ -2587,104 +2926,84 @@
       scale: $('m-key-mode').value,
       length: $('m-length').value,
       rhythm: $('m-rhythm').value,
-      instrument: fieldValue('m-instrument'),
+      instrument: picker.selected[0] || '',
+      instruments: genMode === 'ensemble' ? picker.selected.slice() : [],
       mode: genMode,
-      chordInstrument: genMode === 'ensemble' ? $('m-ens-chords').value : '',
-      bassInstrument: genMode === 'ensemble' ? $('m-ens-bass').value : '',
     };
   }
 
-  // Generator mode, and the instrument picker's value remembered per mode
-  // (it means the lead in Melody/Ensemble and the chords in Chord progression).
+  // Generator mode, and the picked instruments remembered per mode: one
+  // instrument in Melody (the lead) and Chord progression (the chords), any
+  // number in Ensemble (in the order they were picked).
   let genMode = 'melody';
-  const pickerByMode = { melody: '', chords: '', ensemble: '' };
+  const pickerByMode = { melody: [], chords: [], ensemble: [] };
+  const picker = { selected: [] };
+  const MAX_ENSEMBLE = 8;
 
-  // The instrument picker is a radio group; these let the rest of the form
-  // code treat it like a single field.
-  function fieldValue(id) {
-    if (id !== 'm-instrument') return $(id).value;
-    const checked = document.querySelector('input[name="instrument"]:checked');
-    return checked ? checked.value : '';
-  }
-
-  function setFieldValue(id, value) {
-    if (id !== 'm-instrument') {
-      $(id).value = value;
-      return;
-    }
-    document.querySelectorAll('input[name="instrument"]').forEach((r) => {
-      r.checked = r.value === value;
+  function renderPicker() {
+    $('m-instrument').querySelectorAll('button').forEach((b) => {
+      const key = b.dataset.key;
+      const on = key === '' ? picker.selected.length === 0 : picker.selected.includes(key);
+      b.setAttribute('aria-pressed', String(on));
+      const order = picker.selected.indexOf(key);
+      b.dataset.order = genMode === 'ensemble' && order >= 0 ? String(order + 1) : '';
     });
     updateInstrumentInfo();
+    updateRandomBadges();
   }
 
   function buildInstrumentPicker() {
     const box = $('m-instrument');
-    const entries = [['', 'Random', 'fits genre & mood']]
-      .concat(Object.keys(INSTRUMENTS).map((k) => [k, INSTRUMENTS[k].name, rangeLabel(INSTRUMENTS[k])]));
-    entries.forEach(([value, name, sub]) => {
-      const label = document.createElement('label');
-      label.className = 'inst';
-      const input = document.createElement('input');
-      input.type = 'radio';
-      input.name = 'instrument';
-      input.value = value;
-      input.defaultChecked = value === '';
-      input.checked = value === '';
-      const span = document.createElement('span');
-      const strong = document.createElement('strong');
-      strong.textContent = name;
-      const small = document.createElement('small');
-      small.textContent = sub;
-      span.appendChild(strong);
-      span.appendChild(small);
-      label.appendChild(input);
-      label.appendChild(span);
-      box.appendChild(label);
+    const entries = [['', 'Random']].concat(Object.keys(INSTRUMENTS).map((k) => [k, INSTRUMENTS[k].name]));
+    entries.forEach(([key, name]) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'inst';
+      b.dataset.key = key;
+      b.textContent = name;
+      if (key) b.title = `${name} · ${rangeLabel(INSTRUMENTS[key])}`;
+      b.addEventListener('click', () => pickInstrument(key));
+      box.appendChild(b);
     });
-    updateInstrumentInfo();
+    renderPicker();
+  }
+
+  function pickInstrument(key) {
+    if (key === '') {
+      picker.selected = [];
+    } else if (genMode === 'ensemble') {
+      const i = picker.selected.indexOf(key);
+      if (i >= 0) picker.selected.splice(i, 1);
+      else if (picker.selected.length < MAX_ENSEMBLE) picker.selected.push(key);
+    } else {
+      picker.selected = picker.selected[0] === key ? [] : [key];
+    }
+    renderPicker();
+    onInstrumentsChanged();
   }
 
   function updateInstrumentInfo() {
-    const key = fieldValue('m-instrument');
-    const inst = INSTRUMENTS[key];
-    $('m-inst-info').textContent = inst ?
-      `${inst.name} · ${rangeLabel(inst)} · ${inst.desc}` :
-      'Random picks an instrument that suits the genre and mood. Every instrument gets melodies written for its range and style.';
+    const keys = picker.selected;
+    let text;
+    if (!keys.length) {
+      text = genMode === 'ensemble' ? 'Random picks a lead, chords and bass. Pick several instruments to build your own band.' : 'Random picks an instrument that suits the genre and mood.';
+    } else if (genMode === 'ensemble') {
+      text = ensembleRoles(keys).map((r) => `${INSTRUMENTS[r.instrument].name}: ${PART_NAMES[r.role].toLowerCase()}`).join(' · ');
+    } else {
+      text = `${INSTRUMENTS[keys[0]].name} · ${rangeLabel(INSTRUMENTS[keys[0]])}`;
+    }
+    $('m-inst-info').textContent = text;
   }
 
-  // Re-plays the current song after its parts changed, swapping in on the
-  // next downbeat if it is playing.
-  function refreshSong() {
-    buildParts(melody);
-    sizeRoll();
-    renderRolled();
-    renderLegend();
-    if (mp.playing) {
-      const drumBeat = nextDrumDownbeat();
-      startMelody(drumBeat !== null ? drumBeat : nextMelodyBar(audio.ctx.currentTime + 0.05));
-    }
-  }
-
-  // Picking an instrument after generating applies it to the current song.
-  // For the lead, the melody moves into the new range (whole octaves,
-  // folding any stray notes); chords are re-voiced for the new instrument.
-  // Generate writes a new song in the instrument's style.
-  function onInstrumentPicked(key) {
-    if (!melody || !INSTRUMENTS[key]) return;
-    if (genMode === 'chords') {
-      if (key === melody.chordInstrument) return;
-      melody.chordInstrument = key;
-      refreshSong();
-      return;
-    }
-    if (key === melody.instrument) return;
+  // Moves the melody into a new lead instrument's range (whole octaves,
+  // folding any stray notes).
+  function revoiceLead(key) {
     const [low, high] = INSTRUMENTS[key].range;
     let best = 0;
     let bestScore = Infinity;
     for (let k = -4; k <= 4; k++) {
       const outside = melody.notes.filter((n) => n.midi + 12 * k < low || n.midi + 12 * k > high).length;
-      const mid = melody.notes.reduce((sum, n) => sum + n.midi + 12 * k, 0) / melody.notes.length;
+      const mid = melody.notes.reduce((sum, n) => sum + n.midi + 12 * k, 0) / Math.max(1, melody.notes.length);
       const score = outside * 100 + Math.abs(mid - (low + high) / 2);
       if (score < bestScore) {
         bestScore = score;
@@ -2692,28 +3011,52 @@
       }
     }
     melody.notes.forEach((n) => {
-      let m = n.midi + 12 * best;
-      while (m < low) m += 12;
-      while (m > high) m -= 12;
-      n.midi = m;
+      n.midi = fitRange(n.midi + 12 * best, key);
     });
     melody.instrument = key;
-    refreshSong();
   }
 
-  function onEnsemblePartPicked() {
+  // Picking instruments after generating applies them to the current song;
+  // Generate writes a new song in their style.
+  function onInstrumentsChanged() {
     if (!melody) return;
-    const chordKey = $('m-ens-chords').value;
-    const bassKey = $('m-ens-bass').value;
-    if (chordKey) melody.chordInstrument = chordKey;
-    if (bassKey) melody.bassInstrument = bassKey;
-    if (chordKey || bassKey) refreshSong();
+    const keys = picker.selected;
+    if (!keys.length) return;
+    if (genMode === 'chords') {
+      melody.chordInstrument = keys[0];
+    } else if (genMode === 'ensemble') {
+      melody.ensemble = keys.slice();
+      const lead = ensembleRoles(keys)[0].instrument;
+      if (lead !== melody.instrument) revoiceLead(lead);
+    } else if (keys[0] !== melody.instrument) {
+      revoiceLead(keys[0]);
+    }
+    songChanged();
+  }
+
+  // Updates everything after the song's notes, parts or key changed. A
+  // playing song keeps playing from where it is.
+  function songChanged() {
+    buildParts(melody);
+    if (!melody.parts.some((p) => p.id === roll.editId)) roll.editId = melody.parts[0].id;
+    roll.cache = null;
+    sizeRoll();
+    renderRolled();
+    renderLegend();
+    updateVariationButtons();
+    if (mp.playing && !IN_PLUGIN) {
+      const built = melodyEvents(melody);
+      mp.events = built.events;
+      const pos = audio.ctx.currentTime + LOOKAHEAD - mp.loopStart;
+      mp.idx = mp.events.findIndex((e) => e.time >= pos);
+      if (mp.idx < 0) mp.idx = mp.events.length;
+    }
   }
 
   const MODE_TEXT = {
-    melody: { legend: 'Instrument', backing: 'Backing chords', download: 'melody' },
-    chords: { legend: 'Chord instrument', backing: 'Bass line', download: 'chords' },
-    ensemble: { legend: 'Lead instrument', backing: '', download: 'ensemble' },
+    melody: { legend: 'Instrument', backing: 'Backing chords', download: 'Melody' },
+    chords: { legend: 'Chord instrument', backing: 'Bass line', download: 'Chords' },
+    ensemble: { legend: `Instruments (pick up to ${MAX_ENSEMBLE})`, backing: '', download: 'Ensemble' },
   };
 
   function applyModeUi() {
@@ -2721,142 +3064,112 @@
     $('m-inst-legend').textContent = text.legend;
     $('m-chords-label').textContent = text.backing;
     $('m-chords').closest('.switch').hidden = !text.backing;
-    document.querySelectorAll('.ens-only').forEach((el) => {
-      el.hidden = genMode !== 'ensemble';
-    });
-    $('m-export').textContent = `Download ${text.download} MIDI`;
-    $('m-export-all').textContent = `Download ${text.download} + drums MIDI`;
+    $('m-export').textContent = `${text.download} MIDI`;
+    $('m-export-all').textContent = `${text.download} + drums MIDI`;
     $('m-roll').classList.toggle('is-tall', genMode !== 'melody');
-    updateInstrumentInfo();
+    renderPicker();
   }
 
   // Switching modes keeps the current song: the same chords and melody are
   // re-arranged for the new mode.
   function setMode(mode) {
     if (mode === genMode) return;
-    pickerByMode[genMode] = fieldValue('m-instrument');
+    pickerByMode[genMode] = picker.selected.slice();
     genMode = mode;
-    setFieldValue('m-instrument', pickerByMode[mode]);
+    picker.selected = pickerByMode[mode].slice();
     applyModeUi();
-    updateRandomBadges();
     if (melody) {
       melody.mode = mode;
-      refreshSong();
+      roll.span = null;
+      songChanged();
     }
   }
 
+  const PART_COLORS = ['157, 140, 255', '62, 207, 178', '90, 169, 255', '255, 138, 170', '240, 200, 90', '150, 215, 110', '210, 160, 255', '110, 200, 230', '255, 170, 110'];
+  const partColor = (i) => PART_COLORS[i % PART_COLORS.length];
+
+  // The legend doubles as the part picker for editing and variations.
   function renderLegend() {
     const box = $('m-legend');
     box.innerHTML = '';
-    if (!melody || melody.parts.length < 2) {
-      box.hidden = true;
-      return;
-    }
-    box.hidden = false;
-    const names = { lead: 'Lead', chords: 'Chords', bass: 'Bass' };
-    melody.parts.forEach((part) => {
-      const item = document.createElement('span');
-      item.className = 'legend-item';
+    box.hidden = !melody;
+    if (!melody) return;
+    melody.parts.forEach((part, i) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'legend-item';
+      b.setAttribute('aria-pressed', String(part.id === roll.editId));
+      b.title = 'Edit this part';
       const dot = document.createElement('i');
-      dot.style.background = `rgb(${ROLE_COLORS[part.role]})`;
-      item.appendChild(dot);
-      item.appendChild(document.createTextNode(`${names[part.role]} · ${INSTRUMENTS[part.instrument].name}`));
-      box.appendChild(item);
+      dot.style.background = `rgb(${partColor(i)})`;
+      b.appendChild(dot);
+      b.appendChild(document.createTextNode(`${PART_NAMES[part.role]} · ${INSTRUMENTS[part.instrument].name}`));
+      b.addEventListener('click', () => {
+        roll.editId = part.id;
+        roll.cache = null;
+        centerRollOn(part);
+        renderLegend();
+        updateVariationButtons();
+        drawRoll(null);
+      });
+      box.appendChild(b);
     });
   }
 
   function updateRandomBadges() {
     document.querySelectorAll('[data-random-field]').forEach((field) => {
+      if (field.classList.contains('field-instrument')) {
+        field.classList.toggle('is-random', picker.selected.length === 0);
+        return;
+      }
       const inputs = field.querySelectorAll('input, select');
-      field.classList.toggle('is-random', Array.from(inputs).some((el) => (el.type === 'radio' ? el.checked && el.value === '' : el.value === '')));
+      field.classList.toggle('is-random', Array.from(inputs).some((el) => el.value === ''));
     });
-  }
-
-  // Each result chip is a lock. Locking writes the rolled value into the
-  // form (so the next Generate keeps it); unlocking sets it back to Random.
-  const LOCK_ICON = '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5"></rect><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"></path></svg>';
-  const UNLOCK_ICON = '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5"></rect><path d="M5.5 7V5a2.5 2.5 0 0 1 4.9-.7"></path></svg>';
-
-  function lockableSettings(m) {
-    const secs = Math.round(((m.totalTicks * 60) / (m.bpm * TPQ)) * m.tickScale);
-    return [
-      { label: 'Genre', value: GENRES[m.genre].name, fields: { 'm-genre': m.genre } },
-      { label: 'Mood', value: MOODS[m.mood].name, fields: { 'm-mood': m.mood } },
-      { label: 'BPM', value: m.bpm, fields: { 'm-bpm': m.bpm } },
-      { label: 'Time', value: `${m.num}/${m.den}`, fields: { 'm-ts-num': m.num, 'm-ts-den': m.den } },
-      { label: 'Key', value: NOTE_NAMES[m.root], fields: { 'm-key-root': m.root } },
-      { label: 'Scale', value: SCALES[m.scale].name, fields: { 'm-key-mode': m.scale } },
-      { label: 'Length', value: `${m.bars} bars · ${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`, fields: { 'm-length': m.length } },
-      { label: 'Rhythm', value: RHYTHMS[m.rhythm] + (m.swing ? ' (swung)' : ''), fields: { 'm-rhythm': m.rhythm } },
-      m.mode === 'chords' ?
-        { label: 'Chord instrument', value: INSTRUMENTS[m.chordInstrument].name, fields: { 'm-instrument': m.chordInstrument } } :
-        { label: m.mode === 'ensemble' ? 'Lead' : 'Instrument', value: INSTRUMENTS[m.instrument].name, fields: { 'm-instrument': m.instrument } },
-    ];
   }
 
   function renderRolled() {
     const box = $('m-rolled');
     if (!melody) return;
     box.innerHTML = '';
-    lockableSettings(melody).forEach((setting) => {
-      const ids = Object.keys(setting.fields);
-      const locked = ids.every((id) => fieldValue(id) !== '');
-      const el = document.createElement('button');
-      el.type = 'button';
-      el.className = 'chip chip-lock' + (locked ? ' is-locked' : ' is-random');
-      el.setAttribute('aria-pressed', String(locked));
-      el.title = locked ? `Unlock ${setting.label} so Generate re-rolls it` : `Lock ${setting.label} at ${setting.value}`;
-      el.innerHTML = locked ? LOCK_ICON : UNLOCK_ICON;
-      const b = document.createElement('b');
-      b.textContent = setting.label;
-      el.appendChild(b);
-      el.appendChild(document.createTextNode(String(setting.value)));
-      el.addEventListener('click', () => {
-        ids.forEach((id) => {
-          setFieldValue(id, locked ? '' : String(setting.fields[id]));
-        });
-        updateRandomBadges();
-        renderRolled();
-        const again = Array.from(box.children).find((c) => c.querySelector('b').textContent === setting.label);
-        if (again) again.focus();
-      });
-      box.appendChild(el);
-    });
-
-    const info = (label, text) => {
+    const m = melody;
+    const r = m.rolled;
+    const secs = Math.round(((m.totalTicks * 60) / (m.bpm * TPQ)) * m.tickScale);
+    const firstBars = m.chords.slice(0, Math.min(4, m.chords.length));
+    const chips = [
+      [GENRES[m.genre].name, r.genre],
+      [MOODS[m.mood].name, r.mood],
+      [`${m.bpm} BPM`, r.bpm],
+      [`${m.num}/${m.den}`, r.meter],
+      [`${NOTE_NAMES[m.root]} ${SCALES[m.scale].name}`, r.root || r.scale],
+      [`${m.bars} bars · ${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`, r.length],
+      [RHYTHMS[m.rhythm] + (m.swing ? ' (swung)' : ''), r.rhythm],
+      [firstBars.map((c) => (m.mode === 'melody' ? c.name : `${c.name} (${romanNumeral(m, c)})`)).join(' – '), false],
+    ];
+    chips.forEach(([text, rolled]) => {
       const chip = document.createElement('span');
-      chip.className = 'chip';
-      const b = document.createElement('b');
-      b.textContent = label;
-      chip.appendChild(b);
-      chip.appendChild(document.createTextNode(text));
+      chip.className = 'chip' + (rolled ? ' is-random' : '');
+      chip.textContent = text;
+      if (rolled) chip.title = 'Picked at random';
       box.appendChild(chip);
-    };
-    const firstBars = melody.chords.slice(0, Math.min(4, melody.chords.length));
-    if (melody.mode !== 'melody') info('Progression', firstBars.map((c) => romanNumeral(melody, c)).join(' – '));
-    info('Chords', firstBars.map((c) => c.name).join(' – '));
-    if (melody.mode === 'ensemble') {
-      info('Chords on', INSTRUMENTS[melody.chordInstrument].name);
-      info('Bass on', INSTRUMENTS[melody.bassInstrument].name);
-    } else if (melody.mode === 'chords') {
-      info('Bass on', INSTRUMENTS[melody.bassInstrument].name);
-    }
-    $('m-lock-hint').hidden = false;
+    });
   }
 
   function generate() {
     melody = generateMelody(readMelodyInput());
+    undoStack.length = 0;
+    roll.editId = 'lead';
+    roll.span = null;
     roll.canvas.parentElement.scrollLeft = 0;
-    sizeRoll();
-    renderRolled();
-    renderLegend();
     $('m-play').disabled = false;
     $('m-export').disabled = false;
     $('m-export-all').disabled = false;
-    roll.canvas.setAttribute('aria-label', `Piano roll: ${melody.parts.map((p) => p.role).join(', ')} over ${melody.bars} bars, chords ${melody.chords.map((c) => c.name).join(', ')}`);
-
-    if (mp.playing) {
-      // Swap the new melody in on the next downbeat.
+    $('m-edit-tools').hidden = false;
+    roll.canvas.setAttribute('aria-label', `Piano roll over ${melody.bars} bars, chords ${melody.chords.map((c) => c.name).join(', ')}`);
+    const wasPlaying = mp.playing;
+    songChanged();
+    centerRollOn(melody.parts[0]);
+    if (wasPlaying) {
+      // Swap the new song in on the next downbeat.
       const now = audio.ctx.currentTime + 0.05;
       const drumBeat = nextDrumDownbeat();
       startMelody(drumBeat !== null ? drumBeat : now);
@@ -2867,9 +3180,250 @@
 
   function resetMelodyControls() {
     $('melody-form').reset();
-    updateInstrumentInfo();
-    updateRandomBadges();
-    renderRolled();
+    picker.selected = [];
+    renderPicker();
+  }
+
+  // ---------------------------------------------------------------------
+  // | Editing and variations                                            |
+  // ---------------------------------------------------------------------
+
+  const undoStack = [];
+
+  function snapshot() {
+    return JSON.stringify({ notes: melody.notes, edits: melody.edits, root: melody.root, chords: melody.chords });
+  }
+
+  function pushUndo() {
+    undoStack.push(snapshot());
+    if (undoStack.length > 60) undoStack.shift();
+    $('m-undo').disabled = false;
+  }
+
+  function undo() {
+    if (!melody || !undoStack.length) return;
+    const prev = JSON.parse(undoStack.pop());
+    melody.notes = prev.notes;
+    melody.edits = prev.edits;
+    melody.root = prev.root;
+    melody.chords = prev.chords;
+    $('m-undo').disabled = !undoStack.length;
+    songChanged();
+    drawRoll(null);
+  }
+
+  const editPart = () => melody && melody.parts.find((p) => p.id === roll.editId);
+
+  // Stores new notes for the part being edited: the lead is the melody
+  // itself; other parts keep their own edited copy.
+  function setPartNotes(part, notes) {
+    notes.sort((a, b) => a.tick - b.tick || a.midi - b.midi);
+    if (part.role === 'lead') {
+      melody.notes.length = 0;
+      notes.forEach((n) => melody.notes.push(n));
+    } else {
+      melody.edits[part.id] = notes;
+    }
+  }
+
+  const isChordal = (part) => ['chords', 'arp', 'pad'].includes(part.role) && isKind(part.instrument, 'poly');
+
+  // Notes that start together, as groups (chords) in time order.
+  function noteGroups(notes) {
+    const byTick = new Map();
+    notes.forEach((n) => {
+      if (!byTick.has(n.tick)) byTick.set(n.tick, []);
+      byTick.get(n.tick).push(n);
+    });
+    return Array.from(byTick.entries()).sort((a, b) => a[0] - b[0]).map(([tick, ns]) => ({ tick, dur: Math.max(...ns.map((n) => n.dur)), notes: ns }));
+  }
+
+  const flatten = (groups) => [].concat(...groups.map((g) => g.notes.map((n) => Object.assign({}, n, { tick: g.tick, dur: g.dur }))));
+
+  function pitchContext(part) {
+    const steps = SCALES[melody.scale].steps;
+    const n = steps.length;
+    const [low, high] = INSTRUMENTS[part.instrument].range;
+    let lo = midiToIdx(melody, low);
+    let hi = midiToIdx(melody, high);
+    if (idxToMidiOf(melody, lo) < low) lo++;
+    if (idxToMidiOf(melody, hi) > high) hi--;
+    const center = midiToIdx(melody, Math.round((low + high) / 2));
+    return {
+      root: melody.root, steps, n, lo, hi, center, span: Math.max(1, (hi - lo) / 2), tonicMidi: melody.root,
+      leap: GENRES[melody.genre].leap, pattern: melody.rhythm, strongSet: new Set(groupStarts(melody.groups)),
+    };
+  }
+
+  const barOf = (tick) => Math.min(melody.chords.length - 1, Math.floor(tick / melody.barTicks));
+
+  // Each variation takes the part's notes and returns new ones.
+  const VARIATIONS = {
+    mutate: { label: 'Mutate', melodic: true, run(notes, part) {
+      const ctx = pitchContext(part);
+      const out = [];
+      notes.forEach((n) => {
+        if (!chance(0.25)) return out.push(Object.assign({}, n));
+        const op = pick(['step', 'step', 'split', 'merge']);
+        if (op === 'split' && n.dur >= 24 && n.dur % 2 === 0) {
+          const idx = midiToIdx(melody, n.midi);
+          out.push(Object.assign({}, n, { dur: n.dur / 2 }));
+          out.push(Object.assign({}, n, { tick: n.tick + n.dur / 2, dur: n.dur / 2, midi: idxToMidiOf(melody, clamp(idx + pick([-1, 1]), ctx.lo, ctx.hi)) }));
+        } else if (op === 'merge' && out.length) {
+          const prev = out[out.length - 1];
+          prev.dur = n.tick + n.dur - prev.tick;
+        } else {
+          const idx = clamp(midiToIdx(melody, n.midi) + pick([-2, -1, 1, 2]), ctx.lo, ctx.hi);
+          out.push(Object.assign({}, n, { midi: idxToMidiOf(melody, idx) }));
+        }
+        return null;
+      });
+      return out;
+    } },
+    rhythm: { label: 'New rhythm', run(notes) {
+      const groups = noteGroups(notes);
+      const ctx = { groups: melody.groups, barTicks: melody.barTicks, strongSet: new Set(groupStarts(melody.groups)), pattern: melody.rhythm, restProb: 0.06, arpUnit: 24 };
+      const out = [];
+      let lastSets = [groups.length ? groups[0].notes : []];
+      for (let bar = 0; bar < melody.bars; bar++) {
+        const inBar = groups.filter((g) => barOf(g.tick) === bar).map((g) => g.notes);
+        const sets = inBar.length ? inBar : lastSets;
+        lastSets = sets;
+        let i = 0;
+        makeBarRhythm(ctx).forEach((it) => {
+          if (it.rest) return;
+          sets[i % sets.length].forEach((n) => out.push(Object.assign({}, n, { tick: bar * melody.barTicks + it.start, dur: it.dur })));
+          i++;
+        });
+      }
+      return out;
+    } },
+    pitches: { label: 'New notes', melodic: true, run(notes, part) {
+      const ctx = pitchContext(part);
+      const state = { prev: ctx.center, lastMove: 0, dir: 1 };
+      return notes.map((n) => {
+        const strong = ctx.strongSet.has(n.tick % melody.barTicks);
+        const idx = commit(state, choosePitch(ctx, state, melody.chords[barOf(n.tick)].pcs, strong));
+        return Object.assign({}, n, { midi: idxToMidiOf(melody, idx) });
+      });
+    } },
+    simplify: { label: 'Simplify', run(notes) {
+      const strong = new Set(groupStarts(melody.groups));
+      const groups = noteGroups(notes);
+      const kept = groups.filter((g, i) => i === 0 || strong.has(g.tick % melody.barTicks) || chance(0.4));
+      kept.forEach((g, i) => {
+        const next = kept[i + 1];
+        const barEnd = (barOf(g.tick) + 1) * melody.barTicks;
+        g.dur = Math.max(g.dur, Math.min(next ? next.tick : melody.totalTicks, barEnd) - g.tick);
+      });
+      return flatten(kept);
+    } },
+    embellish: { label: 'Embellish', melodic: true, run(notes, part) {
+      const ctx = pitchContext(part);
+      const out = [];
+      notes.forEach((n, i) => {
+        const next = notes[i + 1];
+        const a = midiToIdx(melody, n.midi);
+        if (next && n.dur >= 24 && n.dur % 2 === 0 && Math.abs(midiToIdx(melody, next.midi) - a) >= 2) {
+          const dir = Math.sign(midiToIdx(melody, next.midi) - a);
+          out.push(Object.assign({}, n, { dur: n.dur / 2 }));
+          out.push(Object.assign({}, n, { tick: n.tick + n.dur / 2, dur: n.dur / 2, vel: n.vel * 0.85, midi: idxToMidiOf(melody, clamp(a + dir, ctx.lo, ctx.hi)) }));
+        } else {
+          out.push(Object.assign({}, n));
+        }
+      });
+      return out;
+    } },
+    reverse: { label: 'Reverse', run(notes) {
+      return noteGroups(notes).map((g) => ({ tick: melody.totalTicks - (g.tick + g.dur), dur: g.dur, notes: g.notes }))
+        .reduce((all, g) => all.concat(g.notes.map((n) => Object.assign({}, n, { tick: Math.max(0, g.tick), dur: g.dur }))), []);
+    } },
+    invert: { label: 'Invert', melodic: true, run(notes, part) {
+      const ctx = pitchContext(part);
+      const idxs = notes.map((n) => midiToIdx(melody, n.midi)).sort((a, b) => a - b);
+      const mid = idxs[Math.floor(idxs.length / 2)] || 0;
+      return notes.map((n) => Object.assign({}, n, { midi: fitRange(idxToMidiOf(melody, clamp(2 * mid - midiToIdx(melody, n.midi), ctx.lo - 7, ctx.hi + 7)), part.instrument) }));
+    } },
+    humanize: { label: 'Humanize', run(notes) {
+      return notes.map((n) => Object.assign({}, n, { vel: clamp(n.vel * (0.85 + Math.random() * 0.3), 0.2, 1) }));
+    } },
+    legato: { label: 'Legato', run(notes) {
+      const groups = noteGroups(notes);
+      groups.forEach((g, i) => {
+        g.dur = (groups[i + 1] ? groups[i + 1].tick : melody.totalTicks) - g.tick;
+      });
+      return flatten(groups);
+    } },
+    staccato: { label: 'Staccato', run(notes) {
+      return notes.map((n) => Object.assign({}, n, { dur: Math.max(6, Math.round(n.dur * 0.45)) }));
+    } },
+    octDown: { label: 'Oct −', run(notes) {
+      return notes.map((n) => Object.assign({}, n, { midi: Math.max(0, n.midi - 12) }));
+    } },
+    octUp: { label: 'Oct +', run(notes) {
+      return notes.map((n) => Object.assign({}, n, { midi: Math.min(127, n.midi + 12) }));
+    } },
+  };
+
+  function applyVariation(key) {
+    const part = editPart();
+    if (!part) return;
+    const v = VARIATIONS[key];
+    if (v.melodic && isChordal(part)) return;
+    pushUndo();
+    setPartNotes(part, v.run(part.notes.map((n) => Object.assign({}, n)), part));
+    songChanged();
+    drawRoll(null);
+  }
+
+  // Moves the whole song up or down a semitone: key, chords and every part.
+  function transposeSong(semitones) {
+    if (!melody) return;
+    pushUndo();
+    melody.root = mod(melody.root + semitones, 12);
+    melody.chords.forEach((c) => {
+      c.pcs = c.pcs.map((pc) => mod(pc + semitones, 12));
+      c.name = chordName(c.pcs);
+    });
+    melody.notes.forEach((n) => {
+      n.midi += semitones;
+    });
+    Object.keys(melody.edits).forEach((id) => melody.edits[id].forEach((n) => {
+      n.midi += semitones;
+    }));
+    songChanged();
+    drawRoll(null);
+  }
+
+  function buildVariationButtons() {
+    const box = $('m-variations');
+    Object.keys(VARIATIONS).forEach((key) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'btn btn-xs';
+      b.dataset.variation = key;
+      b.textContent = VARIATIONS[key].label;
+      b.addEventListener('click', () => applyVariation(key));
+      box.appendChild(b);
+    });
+    [['Key −', -1], ['Key +', 1]].forEach(([label, st]) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'btn btn-xs';
+      b.textContent = label;
+      b.title = 'Transpose the whole song';
+      b.addEventListener('click', () => transposeSong(st));
+      box.appendChild(b);
+    });
+  }
+
+  function updateVariationButtons() {
+    const part = editPart();
+    document.querySelectorAll('#m-variations [data-variation]').forEach((b) => {
+      const melodicOnly = VARIATIONS[b.dataset.variation].melodic;
+      b.disabled = !part || (melodicOnly && isChordal(part));
+      b.title = b.disabled && part ? 'Works on melody lines (pick a melodic part in the legend)' : `Apply to ${part ? PART_NAMES[part.role].toLowerCase() : 'the selected part'}`;
+    });
   }
 
   // ---------------------------------------------------------------------
@@ -3099,7 +3653,6 @@
   }
 
   const r4 = (x) => Math.round(x * 10000) / 10000;
-  const MIDI_CHANNELS = { lead: 1, chords: 2, bass: 3, backing: 4 };
   const plugin = { lastSig: '', timer: null, messageId: 0, restoreParts: [], pos: { q: 0, playing: false, host: false, bpm: 120 }, songLoopQ: 0, drumLoopQ: 0, stepQ: 0.25 };
 
   // The song as note events in quarter notes, ready for the plugin to play
@@ -3113,17 +3666,18 @@
       const q = r4(e.time * toQ);
       if (e.type === 'note') {
         if (e.role === 'bass' && melody.mode === 'chords' && !$('m-chords').checked) return;
-        events.push([q, r4(e.dur * toQ), e.midi, r4(e.vel), e.synth, MIDI_CHANNELS[e.role]]);
+        events.push([q, r4(e.dur * toQ), e.midi, r4(e.vel), e.synth, e.channel]);
       } else if ($('m-chords').checked) {
+        const backingChannel = partChannel(melody.parts.length);
         const c = e.chord;
         const len = e.dur * toQ;
         const base = 48 + c.pcs[0];
         c.pcs.forEach((pc) => {
           let n = 48 + pc;
           while (n < base) n += 12;
-          events.push([q, r4(len * 0.96), n, 0.6, 'backing', MIDI_CHANNELS.backing]);
+          events.push([q, r4(len * 0.96), n, 0.6, 'backing', backingChannel]);
         });
-        if (melody.instrument !== 'bass') events.push([q, r4(len * 0.9), 36 + c.pcs[0], 0.8, 'backingBass', MIDI_CHANNELS.backing]);
+        if (!isKind(melody.instrument, 'bass')) events.push([q, r4(len * 0.9), 36 + c.pcs[0], 0.8, 'backingBass', backingChannel]);
       }
     });
     return { loopQ: r4(built.loopDur * toQ), events };
@@ -3153,7 +3707,7 @@
     document.querySelectorAll('#melody-form input, #melody-form select').forEach((el) => {
       if (el.id) form[el.id] = el.value;
     });
-    pickerByMode[genMode] = fieldValue('m-instrument');
+    pickerByMode[genMode] = picker.selected.slice();
     return {
       v: 1,
       melody,
@@ -3181,7 +3735,10 @@
     document.querySelectorAll('input[name="m-mode"]').forEach((r) => {
       r.checked = r.value === genMode;
     });
-    setFieldValue('m-instrument', pickerByMode[genMode] || '');
+    Object.keys(pickerByMode).forEach((k) => {
+      if (!Array.isArray(pickerByMode[k])) pickerByMode[k] = pickerByMode[k] ? [pickerByMode[k]] : [];
+    });
+    picker.selected = pickerByMode[genMode].slice();
     $('m-loop').checked = sess.loop !== false;
     $('m-chords').checked = sess.backing !== false;
     if (sess.volumes) {
@@ -3198,12 +3755,14 @@
     updateRandomBadges();
     if (sess.melody) {
       melody = sess.melody;
+      melody.edits = melody.edits || {};
       $('m-play').disabled = false;
       $('m-export').disabled = false;
       $('m-export-all').disabled = false;
-      sizeRoll();
-      renderRolled();
-      renderLegend();
+      $('m-edit-tools').hidden = false;
+      roll.editId = 'lead';
+      roll.span = null;
+      songChanged();
     }
     pushPluginState(true);
   }
@@ -3235,7 +3794,13 @@
     plugin.stepQ = drums.stepQ;
     const midiSong = melody ? songMidi(true) : null;
     const midiDrums = drumsMidi();
+    // The sounds the song uses, so the plugin's synth matches the browser's.
+    const patches = {};
+    song.events.forEach((e) => {
+      if (!patches[e[4]]) patches[e[4]] = patchFor(e[4]);
+    });
     sendToPlugin(Object.assign({ type: 'state' }, state, {
+      patches,
       midiSong: midiSong ? { name: midiSong.name, data: toBase64(midiSong.bytes) } : null,
       midiDrums: { name: midiDrums.name, data: toBase64(midiDrums.bytes) },
       session: JSON.stringify(exportSession()),
@@ -3301,8 +3866,7 @@
     fillSelect($('m-key-mode'), Object.keys(SCALES).map((k) => [k, SCALES[k].name]), 'Random scale');
     fillSelect($('m-rhythm'), Object.keys(RHYTHMS).map((k) => [k, RHYTHMS[k]]), 'Random');
     buildInstrumentPicker();
-    fillSelect($('m-ens-chords'), Object.keys(INSTRUMENTS).map((k) => [k, INSTRUMENTS[k].name]), 'Auto (from genre)');
-    fillSelect($('m-ens-bass'), [['bass', 'Bass'], ['cello', 'Cello'], ['synth', 'Synth lead'], ['pad', 'Synth pad'], ['piano', 'Piano']], 'Auto (from genre)');
+    buildVariationButtons();
     document.querySelectorAll('input[name="m-mode"]').forEach((radio) => {
       radio.addEventListener('change', () => setMode(radio.value));
     });
@@ -3312,6 +3876,7 @@
 
     roll.canvas = $('m-roll');
     roll.ctx = roll.canvas.getContext('2d');
+    initRollEditing();
     ['touchstart', 'wheel', 'pointerdown'].forEach((type) => {
       roll.canvas.parentElement.addEventListener(type, () => {
         roll.touchedAt = performance.now();
@@ -3338,16 +3903,7 @@
     // Melody
     const form = $('melody-form');
     form.addEventListener('input', updateRandomBadges);
-    form.addEventListener('change', (e) => {
-      if (e.target.name === 'instrument') {
-        updateInstrumentInfo();
-        onInstrumentPicked(e.target.value);
-      } else if (e.target.id === 'm-ens-chords' || e.target.id === 'm-ens-bass') {
-        onEnsemblePartPicked();
-      }
-      updateRandomBadges();
-      renderRolled();
-    });
+    form.addEventListener('change', updateRandomBadges);
     form.addEventListener('submit', (e) => {
       e.preventDefault();
       generate();
@@ -3369,6 +3925,13 @@
       startMelody(at !== null ? at : audio.ctx.currentTime + 0.06);
     });
     $('m-reset').addEventListener('click', resetMelodyControls);
+    $('m-undo').addEventListener('click', undo);
+    document.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z' && !/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)) {
+        e.preventDefault();
+        undo();
+      }
+    });
     $('m-export').addEventListener('click', exportMelody);
     $('m-export-all').addEventListener('click', exportMelodyAndDrums);
     $('m-volume').addEventListener('input', (e) => {

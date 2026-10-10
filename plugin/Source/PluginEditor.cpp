@@ -87,7 +87,7 @@ StudioEditor::StudioEditor (StudioProcessor& p)
     builtInSound.onClick = [this] { processor.builtInSound = builtInSound.getToggleState(); };
     addAndMakeVisible (builtInSound);
 
-    hint.setText ("MIDI out: lead ch 1, chords ch 2, bass ch 3, backing ch 4, drums ch 10", juce::dontSendNotification);
+    hint.setText ("MIDI out: one channel per part, in legend order from ch 1 (skipping 10); drums on ch 10", juce::dontSendNotification);
     hint.setColour (juce::Label::textColourId, muted);
     hint.setFont (juce::FontOptions (12.0f));
     hint.setJustificationType (juce::Justification::centredRight);

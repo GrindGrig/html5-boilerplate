@@ -6,16 +6,22 @@ Web Audio API.
 
 - **Music generator**: set BPM, free time signature (1–255 beats over any beat unit, e.g. 7/8,
   7/5 or 4/3), key and scale, length (short/medium/long = 4/8/16 bars), rhythmic
-  pattern, genre, mood and instrument. Every option is optional. Each of the 14
+  pattern, genre, mood and instrument. Every option is optional. Each of the 32
   instruments has its own sound, range, phrasing and rhythm preferences. Anything left on
   _Random_ is rolled from the genre's profile, and the result shows what was
-  rolled. Tap a result to lock it; Generate then re-rolls only the
-  unlocked settings. Melodies come with chords and download as MIDI, either on their own or
+  rolled. Melodies come with chords and download as MIDI, either on their own or
   together with the drum pattern in one file.
 - **Modes**: Melody, Chord progression (voice-led chords with a comping
-  rhythm and bass line, shown with Roman numerals) and Ensemble (lead, chords
-  and bass on separate instruments). Switching modes re-arranges the current
-  song, and MIDI downloads put each part on its own track.
+  rhythm and bass line, shown with Roman numerals) and Ensemble: pick up to
+  eight instruments and each gets a part that suits it (lead, harmony or
+  counter-line, chords, arpeggio or pad, bass). Switching modes re-arranges the
+  current song, and MIDI downloads put each part on its own track.
+- **Editing**: the piano roll is editable after generating. Pick a part in the
+  legend, then add, move, resize or erase notes on a snap grid, with undo. A
+  row of variation buttons changes the selected part in place instead of
+  regenerating the song: mutate, new rhythm, new notes, simplify, embellish,
+  reverse, invert, humanize, legato, staccato, octave up/down, and key up/down
+  for the whole song.
 - **Drum machine**: 12-voice step sequencer in any time signature, with genre presets, half-time,
   normal and double-time feel, a triplet grid, swing, humanize, mute, and
   MIDI export.

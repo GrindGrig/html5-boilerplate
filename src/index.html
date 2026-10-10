@@ -58,7 +58,7 @@
     <section class="panel panel-melody" aria-labelledby="melody-title">
       <div class="panel-head">
         <h2 id="melody-title">Music generator</h2>
-        <p class="hint">Every option is optional. Anything left on <strong>Random</strong> is picked for you when you generate.</p>
+        <p class="hint">Anything left on <strong>Random</strong> is picked for you.</p>
       </div>
 
       <fieldset class="mode-field">
@@ -120,19 +120,9 @@
 
         <fieldset class="field field-instrument" data-random-field>
           <legend id="m-inst-legend">Instrument</legend>
-          <div class="instrument-picker" id="m-instrument" role="radiogroup" aria-describedby="m-inst-info"></div>
+          <div class="instrument-picker" id="m-instrument" role="group" aria-describedby="m-inst-info"></div>
           <p class="inst-info" id="m-inst-info"></p>
         </fieldset>
-
-        <div class="field ens-only" hidden>
-          <label for="m-ens-chords">Chord instrument</label>
-          <select id="m-ens-chords" name="ensChords"></select>
-        </div>
-
-        <div class="field ens-only" hidden>
-          <label for="m-ens-bass">Bass instrument</label>
-          <select id="m-ens-bass" name="ensBass"></select>
-        </div>
       </form>
 
       <div class="actions">
@@ -145,21 +135,40 @@
           <input type="range" id="m-volume" min="0" max="1" step="0.01" value="0.8">
         </label>
         <span class="spacer"></span>
-        <button type="button" class="btn btn-ghost" id="m-reset">Unlock all</button>
-        <button type="button" class="btn btn-ghost" id="m-export" disabled>Download melody MIDI</button>
-        <button type="button" class="btn btn-ghost" id="m-export-all" disabled>Download melody + drums MIDI</button>
+        <button type="button" class="btn btn-ghost" id="m-reset" title="Set every option back to Random">All random</button>
+        <button type="button" class="btn btn-ghost" id="m-export" disabled>Melody MIDI</button>
+        <button type="button" class="btn btn-ghost" id="m-export-all" disabled>Melody + drums MIDI</button>
       </div>
       <p class="save-status" aria-live="polite"></p>
 
       <div class="rolled" id="m-rolled" aria-live="polite">
         <p class="rolled-empty">Nothing generated yet. Pick a mode and press <strong>Generate</strong>.</p>
       </div>
-      <p class="lock-hint" id="m-lock-hint" hidden>Tap a setting to lock it. <strong>Generate</strong> re-rolls everything that isn't locked.</p>
 
+      <div class="edit-tools" id="m-edit-tools" hidden>
+        <div class="segmented segmented-sm" role="radiogroup" aria-label="Piano roll tool">
+          <label title="Click to add a note, drag to move, drag the right edge to resize, double-click to delete"><input type="radio" name="m-tool" value="edit"><span>Edit</span></label>
+          <label title="Click notes to delete them"><input type="radio" name="m-tool" value="erase"><span>Erase</span></label>
+          <label title="Leave the notes alone (scroll on touch screens)"><input type="radio" name="m-tool" value="scroll"><span>Scroll</span></label>
+        </div>
+        <label class="snap-field">Grid
+          <select id="m-snap">
+            <option value="48">1/4</option>
+            <option value="24">1/8</option>
+            <option value="12" selected>1/16</option>
+            <option value="16">1/8T</option>
+            <option value="6">1/32</option>
+          </select>
+        </label>
+        <button type="button" class="btn btn-xs" id="m-undo" disabled title="Undo (Ctrl+Z)">Undo</button>
+        <span class="edit-label">Change the selected part:</span>
+        <div class="variations" id="m-variations"></div>
+      </div>
+
+      <div class="roll-legend" id="m-legend" hidden></div>
       <div class="roll-wrap">
         <canvas id="m-roll" class="piano-roll" role="img" aria-label="Piano roll of the generated song"></canvas>
       </div>
-      <div class="roll-legend" id="m-legend" hidden></div>
     </section>
 
     <!-- Drum machine -->

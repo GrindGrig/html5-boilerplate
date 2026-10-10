@@ -16,6 +16,7 @@ struct PlayData
     struct Hit { double start; int drum; float velocity; };
 
     std::vector<Note> song;
+    std::vector<studio::SoundEngine::Patch> patches; // Note::patch indexes this
     double songLoop = 0.0;
     bool loop = true;
     std::vector<Hit> drums;

@@ -15,28 +15,10 @@ class SoundEngine
 public:
     static constexpr int numDrums = 12;
 
-    // Index of a synth patch by the name the web app uses ("piano", "sax", ...),
-    // or -1 if unknown.
-    static int patchIndex (const juce::String& name);
-
-    void prepare (double sampleRate);
-    void reset();
-
-    // Starts a note `delay` samples into the next render call; it releases
-    // after `gate` samples.
-    void noteOn (int patch, int midiNote, float velocity, int delay, int gate);
-
-    // Fires drum `type` (0..11, the web app's order) `delay` samples ahead.
-    void drumHit (int type, float velocity, int delay, int kit);
-
-    // Releases every sounding note (transport stop or jump).
-    void releaseAll();
-
-    void render (juce::AudioBuffer<float>& buffer, int numSamples, float songGain, float drumGain, float master, int kit);
-
-private:
     enum class Wave { sine, saw, square, triangle };
 
+    // A synth sound; the web app sends its whole table (PATCHES in app.js)
+    // so the plugin sounds like the browser.
     struct Patch
     {
         Wave wave1 = Wave::saw, wave2 = Wave::saw;
@@ -51,6 +33,29 @@ private:
         float level = 0.15f;
     };
 
+    // Built-in patch by the name the web app uses ("piano", "sax", ...);
+    // unknown names get the piano.
+    static Patch builtInPatch (const juce::String& name);
+
+    // `base` with any fields set in a patch object from the web app.
+    static Patch patchFromVar (const juce::var& v, Patch base);
+
+    void prepare (double sampleRate);
+    void reset();
+
+    // Starts a note `delay` samples into the next render call; it releases
+    // after `gate` samples.
+    void noteOn (const Patch& patch, int midiNote, float velocity, int delay, int gate);
+
+    // Fires drum `type` (0..11, the web app's order) `delay` samples ahead.
+    void drumHit (int type, float velocity, int delay, int kit);
+
+    // Releases every sounding note (transport stop or jump).
+    void releaseAll();
+
+    void render (juce::AudioBuffer<float>& buffer, int numSamples, float songGain, float drumGain, float master, int kit);
+
+private:
     struct Envelope
     {
         enum Stage { idle, attack, decay, sustain, release };
@@ -72,7 +77,7 @@ private:
     struct Voice
     {
         bool active = false;
-        const Patch* patch = nullptr;
+        Patch patch;
         int note = 0, delay = 0, gate = 0;
         float velocity = 0.0f;
         double freq = 440.0, phase1 = 0.0, phase2 = 0.0, phaseMod = 0.0, vibPhase = 0.0, time = 0.0;
@@ -96,6 +101,7 @@ private:
     struct Kit { float kickPitch, kickEnd, kickDecay, snareTone, snareDecay, hatDecay, filter; };
 
     static const Patch& patch (int index);
+    static int patchIndex (const juce::String& name);
     static const Kit& kitParams (int kit);
 
     float renderVoice (Voice& v);

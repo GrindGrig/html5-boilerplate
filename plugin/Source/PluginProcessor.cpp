@@ -2,6 +2,7 @@
 #include "PluginEditor.h"
 
 #include <cmath>
+#include <map>
 
 namespace
 {
@@ -26,13 +27,24 @@ std::shared_ptr<PlayData> PlayData::fromVar (const juce::var& v)
     d->songLoop = toDouble (song["loopQ"]);
     if (auto* events = song["events"].getArray())
     {
+        // Each synth name used gets its patch: the built-in one with the
+        // page's settings for it on top.
+        std::map<juce::String, int> patchByName;
+        const auto pagePatches = v["patches"];
         d->song.reserve ((size_t) events->size());
         for (const auto& e : *events)
         {
             if (! e.isArray() || e.size() < 6) continue;
-            const auto patch = studio::SoundEngine::patchIndex (e[4].toString());
+            const auto name = e[4].toString();
+            auto found = patchByName.find (name);
+            if (found == patchByName.end())
+            {
+                d->patches.push_back (studio::SoundEngine::patchFromVar (pagePatches[juce::Identifier (name.isEmpty() ? "piano" : name)],
+                                                                        studio::SoundEngine::builtInPatch (name)));
+                found = patchByName.emplace (name, (int) d->patches.size() - 1).first;
+            }
             d->song.push_back ({ toDouble (e[0]), toDouble (e[1]), (int) e[2], (float) toDouble (e[3], 0.8),
-                                 patch < 0 ? 0 : patch, juce::jlimit (1, 16, (int) e[5]) });
+                                 found->second, juce::jlimit (1, 16, (int) e[5]) });
         }
     }
 
@@ -256,7 +268,7 @@ void StudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::Midi
         {
             const auto offset = offsetOf (t);
             if (builtIn)
-                engine.noteOn (n.patch, n.note, n.velocity, offset, juce::jmax (1, (int) (n.length / qPerSample)));
+                engine.noteOn (data->patches[(size_t) n.patch], n.note, n.velocity, offset, juce::jmax (1, (int) (n.length / qPerSample)));
             midi.addEvent (juce::MidiMessage::noteOn (n.channel, n.note, juce::jlimit (0.05f, 1.0f, n.velocity)), offset);
             if (pendingOffs.size() < pendingOffs.capacity())
                 pendingOffs.push_back ({ t + juce::jmax (0.01, n.length), n.channel, n.note });

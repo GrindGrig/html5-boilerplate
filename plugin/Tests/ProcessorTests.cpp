@@ -113,6 +113,22 @@ int main (int argc, char** argv)
     std::cout << "song: " << songEvents << " events over " << songLoop << " quarters; drums: "
               << drumHits << " hits over " << drumLoop << " quarters" << std::endl;
 
+    std::cout << "\nSynth patches from the page:" << std::endl;
+    {
+        const auto data = PlayData::fromVar (state);
+        auto* pagePatches = state["patches"].getDynamicObject();
+        check (pagePatches != nullptr && (int) data->patches.size() == pagePatches->getProperties().size(),
+               "one patch per sound the song uses (" + juce::String ((int) data->patches.size()) + ")");
+        bool matches = true;
+        for (const auto& n : data->song)
+        {
+            const auto name = state["song"]["events"][(int) (&n - data->song.data())][4].toString();
+            const auto expected = (float) (double) state["patches"][juce::Identifier (name)]["level"];
+            if (std::abs (data->patches[(size_t) n.patch].level - expected) > 1e-6f) matches = false;
+        }
+        check (matches, "each note uses its sound's settings from the page");
+    }
+
     constexpr double sr = 48000.0;
     constexpr int block = 512;
 
