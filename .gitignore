@@ -4,3 +4,6 @@ node_modules
 packages
 dist/package-lock.json
 src/package-lock.json
+
+# Plugin build output
+plugin/build

@@ -488,6 +488,23 @@ input[type="range"] {
   }
 }
 
+/* Plugin (VST3/AU) window
+   ========================================================================== */
+
+.host-status {
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.in-plugin .app-footer {
+  display: none;
+}
+
 /* Generator modes
    ========================================================================== */
 

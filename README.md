@@ -22,6 +22,10 @@ Web Audio API.
 
 Open `src/index.html` in a browser, or run `npm run build` and serve `dist/`.
 
+**VST3 / AU plugin**: `plugin/` builds the same app as an instrument plugin
+that plays in sync with your DAW and outputs MIDI. GitHub Actions builds it
+for macOS, Windows and Linux; see [`plugin/INSTALL.md`](plugin/INSTALL.md).
+
 On phones the transport moves to a bottom bar, the drum grid stacks into
 finger-sized pads, the piano roll scrolls and follows the playhead, MIDI
 exports open the share sheet, and sound plays even with the iPhone silent

@@ -18,6 +18,12 @@
   const mod = (n, m) => ((n % m) + m) % m;
   const $ = (id) => document.getElementById(id);
 
+  // Inside the VST3/AU plugin the page runs in the plugin window's web view.
+  // JUCE injects `window.__JUCE__`; sound and timing then come from the
+  // plugin (synced to the DAW), not from Web Audio.
+  const juceBackend = window.__JUCE__ && window.__JUCE__.backend;
+  const IN_PLUGIN = !!juceBackend;
+
   // Picks a value from `[[value, weight], ...]`.
   function weighted(entries) {
     const total = entries.reduce((sum, e) => sum + e[1], 0);
@@ -1229,6 +1235,11 @@
   }
 
   function initAudio() {
+    if (IN_PLUGIN) {
+      // A stand-in clock so shared code paths keep working; the plugin plays.
+      if (!audio.ctx) audio.ctx = { currentTime: 0, state: 'running', resume() {} };
+      return audio.ctx;
+    }
     if (!audio.ctx) {
       try {
         if (navigator.audioSession) navigator.audioSession.type = 'playback';
@@ -1972,6 +1983,13 @@
   }
 
   function startMelody(at) {
+    if (IN_PLUGIN) {
+      if (!melody) return;
+      mp.playing = true;
+      updatePlayButtons();
+      pushPluginState(true);
+      return;
+    }
     if (!melody) return;
     initAudio();
     fadeOut(mp.out);
@@ -1982,6 +2000,12 @@
   }
 
   function stopMelody() {
+    if (IN_PLUGIN) {
+      mp.playing = false;
+      updatePlayButtons();
+      pushPluginState(true);
+      return;
+    }
     mp.playing = false;
     if (audio.ctx) fadeOut(mp.out);
     mp.out = null;
@@ -2029,6 +2053,12 @@
   }
 
   function startDrums(at) {
+    if (IN_PLUGIN) {
+      dp.playing = true;
+      updatePlayButtons();
+      pushPluginState(true);
+      return;
+    }
     initAudio();
     fadeOut(dp.out);
     Object.assign(dp, { playing: true, step: 0, nextTime: at, out: newOutput(audio.drumFilter), queue: [], shown: -1 });
@@ -2037,6 +2067,13 @@
   }
 
   function stopDrums() {
+    if (IN_PLUGIN) {
+      dp.playing = false;
+      showStep(-1);
+      updatePlayButtons();
+      pushPluginState(true);
+      return;
+    }
     dp.playing = false;
     if (audio.ctx) fadeOut(dp.out);
     dp.out = null;
@@ -2047,6 +2084,10 @@
   }
 
   function triggerDrum(id, time, vel, out) {
+    if (IN_PLUGIN) {
+      sendToPlugin({ type: 'preview', drum: DRUMS.findIndex((d) => d.id === id), vel });
+      return;
+    }
     DRUM_SYNTHS[id](time, vel, KITS[drum.kit], out || audio.drumFilter);
   }
 
@@ -2175,6 +2216,10 @@
   }
 
   function saveFile(bytes, name) {
+    if (IN_PLUGIN) {
+      sendToPlugin({ type: 'saveFile', name, data: toBase64(bytes) });
+      return;
+    }
     if (viewerDownloads) {
       const zipName = name.replace(/\.mid$/, '.zip');
       viewerDownloads.save({ filename: zipName, data: zipOne(name, bytes) }).then(() => {
@@ -2298,26 +2343,37 @@
     return fileName(`${prefix}-${GENRES[m.genre].name}-${INSTRUMENTS[main].name}-${MOODS[m.mood].name}-${NOTE_NAMES[m.root]}-${m.scale}-${m.bpm}bpm${suffix}.mid`);
   }
 
+  function songMidi(withDrums) {
+    const t = melodyTracks(melody);
+    const tracks = [t.conductor].concat(t.tracks);
+    if (withDrums) tracks.push(drumTrack(t.length, MIDI_TPQ / melody.tickScale));
+    return { bytes: midiFile(tracks), name: melodyName(melody, withDrums ? '-with-drums' : '') };
+  }
+
+  function drumsMidi() {
+    const scale = gridDen(drum.den) / drum.den;
+    const conductor = [tempoEvent(drum.bpm / scale), { tick: 0, bytes: [0xff, 0x58, 0x04, drum.num, Math.log2(gridDen(drum.den)), 24, 8] }];
+    const name = `drums-${PRESETS[drum.preset].name}-${drum.num}-${drum.den}-${drum.feel}${drum.triplet ? '-triplet' : ''}-${drum.bpm}bpm.mid`;
+    return { bytes: midiFile([conductor, drumTrack(0, MIDI_TPQ / scale)]), name: fileName(name) };
+  }
+
   function exportMelody() {
     if (!melody) return;
-    const t = melodyTracks(melody);
-    saveFile(midiFile([t.conductor].concat(t.tracks)), melodyName(melody, ''));
+    const f = songMidi(false);
+    saveFile(f.bytes, f.name);
   }
 
   // Melody, chords and drums in one file, at the melody's tempo and length
   // (the same way Play all plays them together).
   function exportMelodyAndDrums() {
     if (!melody) return;
-    const t = melodyTracks(melody);
-    const quarterTicks = MIDI_TPQ / melody.tickScale;
-    saveFile(midiFile([t.conductor].concat(t.tracks, [drumTrack(t.length, quarterTicks)])), melodyName(melody, '-with-drums'));
+    const f = songMidi(true);
+    saveFile(f.bytes, f.name);
   }
 
   function exportDrums() {
-    const scale = gridDen(drum.den) / drum.den;
-    const conductor = [tempoEvent(drum.bpm / scale), { tick: 0, bytes: [0xff, 0x58, 0x04, drum.num, Math.log2(gridDen(drum.den)), 24, 8] }];
-    const name = `drums-${PRESETS[drum.preset].name}-${drum.num}-${drum.den}-${drum.feel}${drum.triplet ? '-triplet' : ''}-${drum.bpm}bpm.mid`;
-    saveFile(midiFile([conductor, drumTrack(0, MIDI_TPQ / scale)]), fileName(name));
+    const f = drumsMidi();
+    saveFile(f.bytes, f.name);
   }
 
   // ---------------------------------------------------------------------
@@ -2998,7 +3054,7 @@
   let wakeLock = null;
 
   function setWakeLock(on) {
-    if (!('wakeLock' in navigator)) return;
+    if (IN_PLUGIN || !('wakeLock' in navigator)) return;
     if (on && !wakeLock) {
       wakeLock = 'pending';
       navigator.wakeLock.request('screen').then((lock) => {
@@ -3014,6 +3070,224 @@
       wakeLock.release().catch(() => {});
       wakeLock = null;
     }
+  }
+
+  // ---------------------------------------------------------------------
+  // | Plugin bridge                                                     |
+  // ---------------------------------------------------------------------
+
+  function toBase64(bytes) {
+    let bin = '';
+    for (let i = 0; i < bytes.length; i += 0x8000) {
+      bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    }
+    return btoa(bin);
+  }
+
+  // Messages go to the plugin as ASCII-only JSON in small chunks: JUCE's
+  // Linux web view drops messages that are large or contain multi-byte
+  // characters, and chunking costs nothing elsewhere.
+  const CHUNK_SIZE = 3000;
+
+  function sendToPlugin(message) {
+    const json = JSON.stringify(message).replace(/[\u007f-\uffff]/g, (c) => `\\u${(`000${c.charCodeAt(0).toString(16)}`).slice(-4)}`);
+    const count = Math.max(1, Math.ceil(json.length / CHUNK_SIZE));
+    plugin.messageId++;
+    for (let i = 0; i < count; i++) {
+      juceBackend.emitEvent('studio', { type: 'chunk', id: plugin.messageId, i, n: count, data: json.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE) });
+    }
+  }
+
+  const r4 = (x) => Math.round(x * 10000) / 10000;
+  const MIDI_CHANNELS = { lead: 1, chords: 2, bass: 3, backing: 4 };
+  const plugin = { lastSig: '', timer: null, messageId: 0, restoreParts: [], pos: { q: 0, playing: false, host: false, bpm: 120 }, songLoopQ: 0, drumLoopQ: 0, stepQ: 0.25 };
+
+  // The song as note events in quarter notes, ready for the plugin to play
+  // in sync with the DAW: [start, length, note, velocity, synth, channel].
+  function pluginSong() {
+    if (!melody) return { loopQ: 0, events: [] };
+    const built = melodyEvents(melody);
+    const toQ = melody.bpm / 60;
+    const events = [];
+    built.events.forEach((e) => {
+      const q = r4(e.time * toQ);
+      if (e.type === 'note') {
+        if (e.role === 'bass' && melody.mode === 'chords' && !$('m-chords').checked) return;
+        events.push([q, r4(e.dur * toQ), e.midi, r4(e.vel), e.synth, MIDI_CHANNELS[e.role]]);
+      } else if ($('m-chords').checked) {
+        const c = e.chord;
+        const len = e.dur * toQ;
+        const base = 48 + c.pcs[0];
+        c.pcs.forEach((pc) => {
+          let n = 48 + pc;
+          while (n < base) n += 12;
+          events.push([q, r4(len * 0.96), n, 0.6, 'backing', MIDI_CHANNELS.backing]);
+        });
+        if (melody.instrument !== 'bass') events.push([q, r4(len * 0.9), 36 + c.pcs[0], 0.8, 'backingBass', MIDI_CHANNELS.backing]);
+      }
+    });
+    return { loopQ: r4(built.loopDur * toQ), events };
+  }
+
+  // One drum loop as hits in quarter notes: [start, drum index, velocity].
+  function pluginDrums() {
+    const rows = currentRows();
+    const steps = stepCount();
+    const stepQ = ((4 / drum.den) / stepsPerBeat()) * FEELS[drum.feel];
+    const hits = [];
+    for (let st = 0; st < steps; st++) {
+      let q = st * stepQ;
+      if (canSwing() && st % 2 === 1) q += (stepQ * drum.swing) / 300;
+      DRUMS.forEach((d, i) => {
+        const v = rows[d.id][st];
+        if (v && !drum.muted.has(d.id)) hits.push([r4(q), i, v === 2 ? 1 : 0.6]);
+      });
+    }
+    return { loopQ: r4(steps * stepQ), stepQ, hits };
+  }
+
+  // Everything the page needs to come back as it was when the DAW project
+  // is reopened.
+  function exportSession() {
+    const form = {};
+    document.querySelectorAll('#melody-form input, #melody-form select').forEach((el) => {
+      if (el.id) form[el.id] = el.value;
+    });
+    pickerByMode[genMode] = fieldValue('m-instrument');
+    return {
+      v: 1,
+      melody,
+      mode: genMode,
+      pickerByMode,
+      form,
+      loop: $('m-loop').checked,
+      backing: $('m-chords').checked,
+      volumes: { master: $('master-volume').value, melody: $('m-volume').value, drums: $('d-volume').value },
+      drum: {
+        preset: drum.preset, bpm: drum.bpm, num: drum.num, den: drum.den, feel: drum.feel, triplet: drum.triplet,
+        swing: drum.swing, humanize: drum.humanize, kit: drum.kit, straight: drum.straight, trip: drum.trip,
+        stale: drum.stale, source: drum.source, muted: Array.from(drum.muted),
+      },
+    };
+  }
+
+  function importSession(sess) {
+    if (!sess || sess.v !== 1) return;
+    Object.keys(sess.form || {}).forEach((id) => {
+      if ($(id)) $(id).value = sess.form[id];
+    });
+    Object.assign(pickerByMode, sess.pickerByMode || {});
+    genMode = sess.mode || 'melody';
+    document.querySelectorAll('input[name="m-mode"]').forEach((r) => {
+      r.checked = r.value === genMode;
+    });
+    setFieldValue('m-instrument', pickerByMode[genMode] || '');
+    $('m-loop').checked = sess.loop !== false;
+    $('m-chords').checked = sess.backing !== false;
+    if (sess.volumes) {
+      $('master-volume').value = sess.volumes.master;
+      $('m-volume').value = sess.volumes.melody;
+      $('d-volume').value = sess.volumes.drums;
+    }
+    if (sess.drum) {
+      Object.assign(drum, sess.drum, { muted: new Set(sess.drum.muted || []) });
+      syncDrumControls();
+      renderGrid();
+    }
+    applyModeUi();
+    updateRandomBadges();
+    if (sess.melody) {
+      melody = sess.melody;
+      $('m-play').disabled = false;
+      $('m-export').disabled = false;
+      $('m-export-all').disabled = false;
+      sizeRoll();
+      renderRolled();
+      renderLegend();
+    }
+    pushPluginState(true);
+  }
+
+  // Sends the current song, drum loop and settings to the plugin whenever
+  // anything changed (checked a few times a second).
+  function pushPluginState(force) {
+    if (!IN_PLUGIN) return;
+    const song = pluginSong();
+    const drums = pluginDrums();
+    const state = {
+      song,
+      drums: { loopQ: drums.loopQ, hits: drums.hits },
+      loop: $('m-loop').checked,
+      previewSong: mp.playing && !!melody,
+      previewDrums: dp.playing,
+      previewBpm: mp.playing && melody ? melody.bpm : drum.bpm,
+      kit: Object.keys(KITS).indexOf(drum.kit),
+      humanize: drum.humanize,
+      master: Number($('master-volume').value),
+      songGain: Number($('m-volume').value),
+      drumGain: Number($('d-volume').value),
+    };
+    const sig = JSON.stringify(state);
+    if (!force && sig === plugin.lastSig) return;
+    plugin.lastSig = sig;
+    plugin.songLoopQ = song.loopQ;
+    plugin.drumLoopQ = drums.loopQ;
+    plugin.stepQ = drums.stepQ;
+    const midiSong = melody ? songMidi(true) : null;
+    const midiDrums = drumsMidi();
+    sendToPlugin(Object.assign({ type: 'state' }, state, {
+      midiSong: midiSong ? { name: midiSong.name, data: toBase64(midiSong.bytes) } : null,
+      midiDrums: { name: midiDrums.name, data: toBase64(midiDrums.bytes) },
+      session: JSON.stringify(exportSession()),
+    }));
+  }
+
+  // Playhead and drum-step display driven by the plugin's position reports.
+  function pluginDraw() {
+    requestAnimationFrame(pluginDraw);
+    const p = plugin.pos;
+    const songOn = p.playing && melody && plugin.songLoopQ > 0 && (p.host || mp.playing);
+    if (songOn) {
+      const loopOn = $('m-loop').checked;
+      const q = loopOn ? mod(p.q, plugin.songLoopQ) : p.q;
+      drawRoll(q >= 0 && q <= plugin.songLoopQ ? q / plugin.songLoopQ : null);
+      plugin.drewSong = true;
+    } else if (plugin.drewSong) {
+      drawRoll(null);
+      plugin.drewSong = false;
+    }
+    const drumsOn = p.playing && plugin.drumLoopQ > 0 && (p.host || dp.playing);
+    showStep(drumsOn ? Math.floor(mod(p.q, plugin.drumLoopQ) / plugin.stepQ) % stepCount() : -1);
+  }
+
+  function initPlugin() {
+    document.documentElement.classList.add('in-plugin');
+    const status = document.createElement('span');
+    status.className = 'host-status';
+    status.id = 'host-status';
+    status.textContent = 'Plugin · waiting for the DAW';
+    $('play-all').parentElement.insertBefore(status, $('play-all'));
+    juceBackend.addEventListener('position', (p) => {
+      plugin.pos = p;
+      status.textContent = p.host ?
+        `DAW ${p.playing ? 'playing' : 'stopped'} · ${Math.round(p.bpm * 10) / 10} BPM` :
+        (p.playing ? `Previewing · ${Math.round(p.bpm)} BPM` : 'DAW stopped · press Play in your DAW or preview here');
+    });
+    // The saved session arrives in chunks, like everything else.
+    juceBackend.addEventListener('restoreChunk', (part) => {
+      if (part.i === 0) plugin.restoreParts = [];
+      plugin.restoreParts[part.i] = part.data;
+      if (plugin.restoreParts.filter((x) => x !== undefined).length !== part.n) return;
+      try {
+        importSession(JSON.parse(plugin.restoreParts.join('')));
+      } catch {
+        // A session from an incompatible version: start fresh.
+      }
+      plugin.restoreParts = [];
+    });
+    plugin.timer = setInterval(() => pushPluginState(false), 250);
+    requestAnimationFrame(pluginDraw);
+    sendToPlugin({ type: 'ready' });
   }
 
   // ---------------------------------------------------------------------
@@ -3204,6 +3478,8 @@
       stopDrums();
       drawRoll(null);
     });
+
+    if (IN_PLUGIN) initPlugin();
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
