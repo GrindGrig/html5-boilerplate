@@ -26,8 +26,8 @@ else()
 endif()
 
 juce_add_plugin(MelodyDrumStudio
-    COMPANY_NAME "Melody and Drum Studio"
-    PRODUCT_NAME "Melody and Drum Studio"
+    COMPANY_NAME "Sonata"
+    PRODUCT_NAME "Sonata"
     BUNDLE_ID com.melodydrumstudio.plugin
     PLUGIN_MANUFACTURER_CODE Mdst
     PLUGIN_CODE Mds1
@@ -89,7 +89,7 @@ if(MDS_BUILD_TESTS)
         Source/PluginEditor.cpp
         Source/SoundEngine.cpp)
     target_compile_definitions(StudioTests PRIVATE
-        JucePlugin_Name="Melody and Drum Studio"
+        JucePlugin_Name="Sonata"
         JUCE_WEB_BROWSER=1
         JUCE_USE_CURL=0)
     target_link_libraries(StudioTests PRIVATE
