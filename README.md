@@ -1,4 +1,4 @@
-# Melody & Drum Studio
+# Sonata
 
 This fork turns the boilerplate into a browser music tool (`src/index.html`,
 `src/js/app.js`, `src/css/app.css`). It has no dependencies and runs on the
