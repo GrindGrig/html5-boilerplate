@@ -1084,16 +1084,26 @@
     if (!m.baseBars) m.baseBars = m.bars;
   }
 
+  // Every chord of the song is kept and stretched or squeezed like the
+  // notes: in half time each chord lasts two bars, in double time two
+  // chords share a bar.
   function chordsForFeel(m) {
-    const f = FEEL_FACTOR[m.feel];
-    const chords = [];
-    for (let bar = 0; bar < m.bars; bar++) {
-      // Half time: each chord lasts two bars. Double time: two chords share
-      // a bar, which is labelled with the first.
-      const src = f > 1 ? m.baseChords[Math.floor(bar / 2)] : f < 1 ? m.baseChords[Math.min(m.baseChords.length - 1, bar * 2)] : m.baseChords[bar];
-      chords.push(Object.assign({}, src, { bar }));
-    }
-    return chords;
+    const span = m.barTicks * FEEL_FACTOR[m.feel];
+    return m.baseChords.map((c, i) => Object.assign({}, c, { bar: Math.floor((i * span) / m.barTicks), tick: i * span, len: span }));
+  }
+
+  // Where a chord starts and how long it lasts in ticks. Chords from before
+  // the feel existed only know their bar.
+  const chordTick = (m, c) => (c.tick !== undefined ? c.tick : c.bar * m.barTicks);
+  const chordLen = (m, c) => c.len || m.barTicks;
+
+  // The chord sounding at a tick.
+  function chordAt(m, tick) {
+    let found = m.chords[0];
+    m.chords.forEach((c) => {
+      if (chordTick(m, c) <= tick) found = c;
+    });
+    return found;
   }
 
   function applyFeel(m, feel) {
@@ -2193,7 +2203,7 @@
     // Melody mode keeps its simple backing chords (toggled by the switch).
     if (m.mode === 'melody') {
       m.chords.forEach((c) => {
-        events.push({ type: 'chord', time: c.bar * m.barTicks * spt, dur: m.barTicks * spt, chord: c });
+        events.push({ type: 'chord', time: chordTick(m, c) * spt, dur: chordLen(m, c) * spt, chord: c });
       });
     }
     events.sort((a, b) => a.time - b.time);
@@ -2637,7 +2647,7 @@
       const others = sounding(n.tick);
       const clashes = (midi) => others.some((o) => o === midi || Math.abs(o - midi) === 1 || Math.abs(o - midi) === 13 || Math.abs(o - midi) === 11);
       if (!clashes(n.midi)) return;
-      const chord = m.chords[Math.min(m.chords.length - 1, Math.floor(n.tick / m.barTicks))].pcs;
+      const chord = chordAt(m, n.tick).pcs;
       for (let dd = 1; dd <= 5; dd++) {
         const cand = [n.midi + dd, n.midi - dd].find((c) => c >= low && c <= high && chord.includes(mod(c, 12)) && !clashes(c));
         if (cand !== undefined) {
@@ -2826,8 +2836,8 @@
     if (m.mode === 'melody') {
       let chords = [{ tick: 0, bytes: textEvent(0x03, 'Backing chords') }];
       m.chords.forEach((c) => {
-        const start = c.bar * m.barTicks * k;
-        const dur = m.barTicks * k - 10;
+        const start = Math.round(chordTick(m, c) * k);
+        const dur = Math.round(chordLen(m, c) * k) - 10;
         c.pcs.forEach((pc) => {
           let note = 48 + pc;
           while (note < 48 + c.pcs[0]) note += 12;
@@ -3021,8 +3031,8 @@
     g.fillRect(0, 0, roll.w, CHORD_LANE);
     g.font = '600 11px system-ui, sans-serif';
     m.chords.forEach((c) => {
-      const x = c.bar * m.barTicks * L.xPerTick;
-      const w = m.barTicks * L.xPerTick;
+      const x = chordTick(m, c) * L.xPerTick;
+      const w = chordLen(m, c) * L.xPerTick;
       if (w > 28) {
         g.fillStyle = '#ffb547';
         g.fillText(c.name, x + 5, 15, w - 8);
@@ -3806,7 +3816,7 @@
     };
   }
 
-  const barOf = (tick) => Math.min(melody.chords.length - 1, Math.floor(tick / melody.barTicks));
+  const barOf = (tick) => Math.min(melody.bars - 1, Math.floor(tick / melody.barTicks));
 
   // Each variation takes the part's notes and returns new ones.
   const VARIATIONS = {
@@ -3854,7 +3864,7 @@
       const state = { prev: ctx.center, lastMove: 0, dir: 1 };
       return notes.map((n) => {
         const strong = ctx.strongSet.has(n.tick % melody.barTicks);
-        const idx = commit(state, choosePitch(ctx, state, melody.chords[barOf(n.tick)].pcs, strong));
+        const idx = commit(state, choosePitch(ctx, state, chordAt(melody, n.tick).pcs, strong));
         return Object.assign({}, n, { midi: idxToMidiOf(melody, idx) });
       });
     } },

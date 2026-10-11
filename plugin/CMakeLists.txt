@@ -5,7 +5,7 @@ cmake_minimum_required(VERSION 3.22)
 # silently skips a plugin it cannot load).
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
-project(MelodyDrumStudio VERSION 1.0.0 LANGUAGES C CXX)
+project(MelodyDrumStudio VERSION 1.0.1 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
