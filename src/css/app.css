@@ -1,22 +1,51 @@
 /* ==========================================================================
    Sonata
+   Analog synth meets steampunk: riveted brass plates over ripstop canvas,
+   stitched leather, bakelite buttons, amber lamps and a parchment roll.
    ========================================================================== */
 
 :root {
   color-scheme: dark;
-  --bg: #101218;
-  --panel: #171a22;
-  --panel-2: #1e2230;
-  --line: #2a3042;
-  --text: #e7e9f0;
-  --muted: #9097ab;
-  --melody: #9d8cff;
-  --melody-soft: rgba(157, 140, 255, 0.18);
-  --drums: #ffb547;
-  --drums-soft: rgba(255, 181, 71, 0.18);
-  --danger: #ff6b7a;
-  --radius: 10px;
+  --bg: #120d09;
+  --leather: #2a1c12;
+  --leather-2: #3a2718;
+  --panel: #211913;
+  --panel-2: #2d231a;
+  --line: #5a4224;
+  --text: #f1e4c4;
+  --muted: #b59e76;
+  --brass: #d4a94f;
+  --brass-hi: #f6dc95;
+  --brass-lo: #7a5822;
+  --copper: #c8703c;
+  --copper-hi: #f0a170;
+  --verdigris: #6fb8a2;
+  --verdigris-soft: rgba(111, 184, 162, 0.16);
+  --lamp: #ffb347;
+  --glass: #0e0a06;
+  --melody: #e0b45a;
+  --melody-soft: rgba(224, 180, 90, 0.16);
+  --drums: #ee8443;
+  --drums-soft: rgba(238, 132, 67, 0.18);
+  --danger: #e2553f;
+  --radius: 8px;
   --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Cinzel", "Copperplate", "Copperplate Gothic Light", "Trajan Pro", Georgia, serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  /* Ripstop weave: a fine thread grid with thicker reinforcement threads. */
+  --ripstop:
+    repeating-linear-gradient(0deg, rgba(255, 235, 200, 0.045) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.18) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(0deg, rgba(255, 225, 170, 0.07) 0 2px, transparent 2px 18px),
+    repeating-linear-gradient(90deg, rgba(255, 225, 170, 0.07) 0 2px, transparent 2px 18px);
+
+  /* Polished brass, lit from above. */
+  --brass-face: linear-gradient(180deg, #f8e2a2 0%, #d7ad55 38%, #a87a2f 70%, #d2a552 100%);
+  --copper-face: linear-gradient(180deg, #f6b98e 0%, #d27a44 40%, #94471f 75%, #c96f3c 100%);
+
+  /* A rivet: brass dome with a highlight and a shadow. */
+  --rivet: radial-gradient(circle at 35% 30%, #fff2c4 0 1px, #e2b960 2px, #8a6224 4px, rgba(0, 0, 0, 0.55) 5px, transparent 6px);
 }
 
 *,
@@ -32,7 +61,10 @@ html {
 body {
   margin: 0;
   min-height: 100vh;
-  background: var(--bg);
+  background:
+    radial-gradient(ellipse at 50% -10%, rgba(255, 170, 80, 0.12), transparent 60%),
+    var(--ripstop),
+    radial-gradient(ellipse at center, #22170f 0%, var(--bg) 75%);
   color: var(--text);
   font-family: var(--font);
   font-size: 14px;
@@ -47,14 +79,18 @@ h2 {
 }
 
 h1 {
-  font-size: 1.15rem;
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
 }
 
 h2 {
   font-size: 1.1rem;
 }
 
-/* Header
+/* Header: a stitched leather strip with a brass nameplate
    ========================================================================== */
 
 .app-header {
@@ -63,34 +99,91 @@ h2 {
   align-items: center;
   justify-content: space-between;
   gap: 8px 20px;
-  padding: 8px 20px;
-  border-bottom: 1px solid var(--line);
-  background: #0c0e13;
+  padding: 10px 20px 12px;
+  background:
+    radial-gradient(ellipse at 30% 0%, rgba(255, 210, 150, 0.08), transparent 70%),
+    repeating-linear-gradient(115deg, rgba(0, 0, 0, 0.08) 0 2px, transparent 2px 5px),
+    linear-gradient(180deg, var(--leather-2), var(--leather));
+  border-bottom: 3px solid var(--brass-lo);
+  box-shadow: 0 1px 0 var(--brass-hi) inset, 0 -1px 0 #f6dc9533 inset, 0 6px 16px rgba(0, 0, 0, 0.55);
   position: sticky;
   top: 0;
   z-index: 5;
+}
+
+/* Saddle stitching along the bottom edge */
+.app-header::after {
+  content: "";
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 5px;
+  border-bottom: 2px dashed rgba(241, 212, 150, 0.45);
+  pointer-events: none;
 }
 
 .brand {
   display: flex;
   align-items: center;
   gap: 12px;
+  position: relative;
+  padding: 5px 20px 5px 10px;
+  border-radius: 6px;
+  background: var(--brass-face);
+  color: #2b1a07;
+  box-shadow:
+    0 0 0 1px #4a3210,
+    0 1px 0 1px rgba(255, 240, 200, 0.4) inset,
+    0 3px 8px rgba(0, 0, 0, 0.6);
+}
+
+/* Screws holding the nameplate */
+.brand::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  margin-top: -3.5px;
+  border-radius: 50%;
+  background:
+    linear-gradient(45deg, transparent 42%, rgba(40, 24, 6, 0.85) 42% 58%, transparent 58%),
+    radial-gradient(circle at 35% 30%, #fff1c0, #a77a30 70%, #5a3c12);
+  right: 5px;
+  box-shadow: 0 0 0 1px rgba(60, 38, 10, 0.6);
+}
+
+.brand h1 {
+  text-shadow: 0 1px 0 rgba(255, 245, 210, 0.7), 0 -1px 0 rgba(70, 40, 5, 0.5);
 }
 
 .brand-mark {
-  width: 24px;
-  height: 24px;
-  fill: var(--melody);
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  fill: #3b2508;
+  animation: gear-turn 24s linear infinite;
 }
 
-.brand-mark rect:nth-child(even) {
-  fill: var(--drums);
+.brand-mark .gear-hub {
+  fill: var(--brass-hi);
+}
+
+body.is-playing .brand-mark {
+  animation-duration: 4s;
+}
+
+@keyframes gear-turn {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .tagline {
   margin: 0;
-  color: var(--muted);
-  font-size: 0.85rem;
+  color: #4a300c;
+  font-size: 0.78rem;
+  font-style: italic;
 }
 
 .transport {
@@ -98,6 +191,98 @@ h2 {
   flex-wrap: wrap;
   align-items: center;
   gap: 10px;
+}
+
+/* VU meter: cream face, red zone, needle driven by the output level */
+.vu {
+  --vu: 0;
+  position: relative;
+  width: 92px;
+  height: 46px;
+  flex: 0 0 auto;
+  border-radius: 6px;
+  background: var(--brass-face);
+  padding: 3px;
+  box-shadow: 0 0 0 1px #3a2608, 0 3px 6px rgba(0, 0, 0, 0.6);
+}
+
+.vu-face {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 4px;
+  background: radial-gradient(ellipse at 50% 110%, #fff3d0 0%, #f0dca8 55%, #d9bf82 100%);
+  box-shadow: 0 2px 4px rgba(60, 30, 0, 0.55) inset;
+}
+
+.vu-face svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.vu-scale {
+  fill: none;
+  stroke: #3a2610;
+  stroke-width: 1;
+}
+
+.vu-red {
+  fill: none;
+  stroke: #b8261a;
+  stroke-width: 2.5;
+}
+
+.vu-ticks {
+  stroke: #3a2610;
+  stroke-width: 0.8;
+}
+
+.vu-text {
+  fill: #3a2610;
+  font: 600 6px var(--font-display);
+  letter-spacing: 0.08em;
+}
+
+.vu-needle {
+  position: absolute;
+  left: 50%;
+  bottom: -14px;
+  width: 1.5px;
+  height: 46px;
+  margin-left: -0.75px;
+  background: #1b1008;
+  transform-origin: 50% 100%;
+  transform: rotate(calc(-48deg + var(--vu) * 96deg));
+  box-shadow: 1px 0 1px rgba(0, 0, 0, 0.25);
+}
+
+.vu-needle::after {
+  content: "";
+  position: absolute;
+  left: -0.5px;
+  top: 0;
+  width: 2.5px;
+  height: 9px;
+  background: #b8261a;
+}
+
+/* Lamp that lights while anything plays */
+.vu-lamp {
+  position: absolute;
+  right: 5px;
+  top: 5px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #8a4a3a, #3a1610);
+}
+
+body.is-playing .vu-lamp {
+  background: radial-gradient(circle at 35% 35%, #fff0c0, #ff6a2a 60%, #a3240f);
+  box-shadow: 0 0 6px 2px rgba(255, 110, 40, 0.7);
 }
 
 /* Layout
@@ -108,25 +293,49 @@ h2 {
   gap: 14px;
   max-width: 1280px;
   margin: 0 auto;
-  padding: 14px 20px 8px;
+  padding: 16px 20px 8px;
 }
 
+/* A panel: ebonised faceplate on ripstop, brass-framed, riveted at the
+   corners, with a stitched inner seam. */
 .panel {
-  background: var(--panel);
-  border: 1px solid var(--line);
+  position: relative;
+  background:
+    var(--rivet) top 6px left 6px / 14px 14px no-repeat,
+    var(--rivet) top 6px right 6px / 14px 14px no-repeat,
+    var(--rivet) bottom 6px left 6px / 14px 14px no-repeat,
+    var(--rivet) bottom 6px right 6px / 14px 14px no-repeat,
+    var(--ripstop),
+    linear-gradient(180deg, #2b2119 0%, var(--panel) 40%, #1a130e 100%);
+  border: 2px solid var(--brass-lo);
   border-radius: 12px;
-  padding: 14px 16px;
+  padding: 18px 22px;
   min-width: 0;
+  box-shadow:
+    0 0 0 1px #0a0604,
+    0 1px 0 rgba(246, 220, 149, 0.35) inset,
+    0 0 30px rgba(0, 0, 0, 0.45) inset,
+    0 10px 24px rgba(0, 0, 0, 0.5);
 }
 
-/* Switching between the generator and the drum machine */
+.panel::before {
+  content: "";
+  position: absolute;
+  inset: 5px 20px;
+  border-top: 1.5px dashed rgba(241, 212, 150, 0.28);
+  border-bottom: 1.5px dashed rgba(241, 212, 150, 0.28);
+  pointer-events: none;
+}
+
+/* Switching between the generator and the drum machine: two brass plates */
 .view-tabs {
   display: flex;
-  gap: 4px;
-  padding: 4px;
-  border: 1px solid var(--line);
+  gap: 6px;
+  padding: 5px;
+  border: 2px solid var(--brass-lo);
   border-radius: 12px;
-  background: var(--panel);
+  background: var(--ripstop), linear-gradient(180deg, #1c140e, #120c08);
+  box-shadow: 0 0 0 1px #0a0604, 0 4px 14px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.6) inset;
 }
 
 .view-tab {
@@ -135,47 +344,56 @@ h2 {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  height: 36px;
-  border: 0;
+  height: 38px;
+  border: 1px solid #4a3418;
   border-radius: 8px;
-  background: transparent;
+  background: linear-gradient(180deg, #3a2c1f, #241a12);
   color: var(--muted);
   font: inherit;
-  font-size: 0.92rem;
-  font-weight: 650;
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   cursor: pointer;
   touch-action: manipulation;
+  box-shadow: 0 1px 0 rgba(255, 230, 170, 0.12) inset, 0 2px 0 #0a0604;
 }
 
 .view-tab[aria-selected="true"] {
-  background: var(--melody);
-  color: #13101f;
+  background: var(--brass-face);
+  border-color: #4a3210;
+  color: #2b1a07;
+  text-shadow: 0 1px 0 rgba(255, 245, 210, 0.6);
+  box-shadow: 0 1px 0 rgba(255, 245, 210, 0.6) inset, 0 0 12px rgba(255, 190, 90, 0.25);
 }
 
 .view-tab-drums[aria-selected="true"] {
-  background: var(--drums);
-  color: #1f1404;
+  background: var(--copper-face);
+  color: #2a1006;
+  text-shadow: 0 1px 0 rgba(255, 220, 190, 0.5);
 }
 
 .view-tab:focus-visible {
-  outline: 2px solid var(--text);
+  outline: 2px solid var(--brass-hi);
   outline-offset: 1px;
 }
 
 @media (hover: hover) {
   .view-tab[aria-selected="false"]:hover {
-    background: var(--panel-2);
+    background: linear-gradient(180deg, #4a3826, #2d2117);
     color: var(--text);
   }
 }
 
-/* Shows on a tab whose part is playing while you look at the other one. */
+/* A small lamp on a tab whose part is playing while you look at the other one. */
 .tab-playing {
   display: none;
-  width: 7px;
-  height: 7px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
-  background: currentColor;
+  background: radial-gradient(circle at 35% 35%, #fff0c0, #ff7a2a 60%, #a3300f);
+  box-shadow: 0 0 6px 2px rgba(255, 130, 40, 0.65);
   animation: tab-pulse 1s ease-in-out infinite;
 }
 
@@ -185,12 +403,13 @@ h2 {
 
 @keyframes tab-pulse {
   50% {
-    opacity: 0.3;
+    opacity: 0.35;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .tab-playing {
+  .tab-playing,
+  .brand-mark {
     animation: none;
   }
 }
@@ -199,27 +418,29 @@ h2 {
   display: none;
 }
 
-/* Uploaded MIDI reference */
+/* Uploaded MIDI reference: a stitched leather patch */
 .ref-bar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 6px 10px;
-  margin: 0 0 10px;
-  padding: 6px 8px;
-  border: 1px dashed var(--line);
+  margin: 0 0 12px;
+  padding: 7px 10px;
+  border: 1.5px dashed rgba(241, 212, 150, 0.35);
   border-radius: var(--radius);
+  background: repeating-linear-gradient(115deg, rgba(0, 0, 0, 0.08) 0 2px, transparent 2px 5px), rgba(58, 39, 24, 0.55);
+  box-shadow: 0 0 0 3px rgba(58, 39, 24, 0.55);
 }
 
 .ref-bar.is-loaded {
   border-style: solid;
-  border-color: rgba(157, 140, 255, 0.45);
-  background: var(--melody-soft);
+  border-color: rgba(224, 180, 90, 0.55);
+  background-color: rgba(224, 180, 90, 0.12);
 }
 
 .ref-bar.is-dragging {
   border-color: var(--melody);
-  background: var(--melody-soft);
+  background-color: var(--melody-soft);
 }
 
 .file-btn {
@@ -238,10 +459,12 @@ h2 {
   min-width: 0;
   color: var(--muted);
   font-size: 0.8rem;
+  font-style: italic;
 }
 
 .ref-bar.is-loaded .ref-info {
   color: var(--text);
+  font-style: normal;
 }
 
 .ref-info.is-error {
@@ -270,19 +493,19 @@ h2 {
 .field.is-from-file > .label::after {
   content: "From file";
   padding: 1px 6px;
-  border-radius: 999px;
-  background: var(--panel-2);
-  color: var(--text);
-  font-size: 0.66rem;
+  border-radius: 3px;
+  background: var(--brass-face);
+  color: #2b1a07;
+  font-size: 0.6rem;
   letter-spacing: 0.06em;
 }
 
 .panel-melody {
-  border-top: 3px solid var(--melody);
+  border-top: 4px solid var(--melody);
 }
 
 .panel-drums {
-  border-top: 3px solid var(--drums);
+  border-top: 4px solid var(--drums);
 }
 
 .panel-head {
@@ -290,21 +513,31 @@ h2 {
   flex-wrap: wrap;
   align-items: baseline;
   gap: 2px 12px;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
 .hint {
   margin: 4px 0 0;
   color: var(--muted);
   font-size: 0.88rem;
+  font-style: italic;
+}
+
+.hint strong,
+.hint em {
+  color: var(--brass-hi);
 }
 
 .app-footer {
   max-width: 1280px;
   margin: 0 auto;
-  padding: 8px 24px 28px;
+  padding: 10px 24px 28px;
   color: var(--muted);
-  font-size: 0.82rem;
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-align: center;
+  text-transform: uppercase;
 }
 
 /* Form controls
@@ -313,31 +546,34 @@ h2 {
 .controls {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 8px 12px;
+  gap: 10px 14px;
   margin: 0;
 }
 
 .field {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 5px;
   min-width: 0;
   margin: 0;
   padding: 0;
   border: 0;
 }
 
+/* Labels read like engraving on brass. */
 .field > label,
 .field > .label,
 .field legend {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: var(--muted);
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  color: var(--brass);
+  font-family: var(--font-display);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.8);
   padding: 0;
 }
 
@@ -345,39 +581,66 @@ h2 {
   margin-bottom: 4px;
 }
 
+/* "Random" hangs off a label like a patinated tag. */
 .field.is-random > label::after,
 .field.is-random > .label::after,
 .field.is-random > legend::after {
   content: "Random";
   padding: 1px 6px;
-  border-radius: 999px;
-  background: var(--melody-soft);
-  color: var(--melody);
-  font-size: 0.66rem;
-  letter-spacing: 0.06em;
+  border: 1px solid rgba(111, 184, 162, 0.45);
+  border-radius: 3px;
+  background: var(--verdigris-soft);
+  color: var(--verdigris);
+  font-family: var(--font);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-shadow: none;
 }
 
 .field output {
-  color: var(--text);
+  color: var(--lamp);
+  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 6px rgba(255, 170, 60, 0.5);
 }
 
+/* Inputs are recessed display windows with an amber read-out. */
 input[type="number"],
 select {
   width: 100%;
   min-width: 0;
   height: 32px;
   padding: 0 8px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--panel-2);
-  color: var(--text);
+  border: 1px solid #6b4f26;
+  border-radius: 5px;
+  background: linear-gradient(180deg, #080503, var(--glass) 40%, #18110a);
+  color: var(--lamp);
   font: inherit;
-  font-size: 0.88rem;
+  font-family: var(--font-mono);
+  font-size: 0.86rem;
+  text-shadow: 0 0 6px rgba(255, 165, 60, 0.45);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.85) inset, 0 1px 0 rgba(246, 220, 149, 0.18);
+}
+
+select {
+  appearance: none;
+  padding-right: 24px;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M0 0h10L5 6z' fill='%23d4a94f'/%3E%3C/svg%3E") right 8px center / 9px 6px no-repeat,
+    linear-gradient(180deg, #080503, var(--glass) 40%, #18110a);
+  cursor: pointer;
+}
+
+select option {
+  background: #1d150e;
+  color: var(--text);
+  text-shadow: none;
 }
 
 input[type="number"]::placeholder {
-  color: var(--muted);
+  color: #8a6a3e;
+  text-shadow: none;
 }
 
 input[type="number"]:focus,
@@ -391,14 +654,71 @@ select:focus {
   outline-color: var(--drums);
 }
 
+/* Faders: a slotted groove with a knurled brass cap */
 input[type="range"] {
+  --cap: var(--brass-face);
+  appearance: none;
   width: 100%;
   min-width: 80px;
+  height: 24px;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
   accent-color: var(--melody);
 }
 
 .panel-drums input[type="range"] {
+  --cap: var(--copper-face);
   accent-color: var(--drums);
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #000, #2a1e12);
+  box-shadow: 0 1px 0 rgba(246, 220, 149, 0.2), 0 1px 2px rgba(0, 0, 0, 0.9) inset;
+}
+
+input[type="range"]::-moz-range-track {
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #000, #2a1e12);
+  box-shadow: 0 1px 0 rgba(246, 220, 149, 0.2), 0 1px 2px rgba(0, 0, 0, 0.9) inset;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px;
+  height: 22px;
+  margin-top: -8px;
+  border: 1px solid #3a2608;
+  border-radius: 3px;
+  background:
+    repeating-linear-gradient(90deg, rgba(60, 35, 5, 0.35) 0 1px, transparent 1px 3px),
+    var(--cap);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.7), 0 1px 0 rgba(255, 245, 210, 0.5) inset;
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 12px;
+  height: 20px;
+  border: 1px solid #3a2608;
+  border-radius: 3px;
+  background:
+    repeating-linear-gradient(90deg, rgba(60, 35, 5, 0.35) 0 1px, transparent 1px 3px),
+    var(--cap);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.7), 0 1px 0 rgba(255, 245, 210, 0.5) inset;
+}
+
+input[type="range"]:focus-visible {
+  outline: 2px solid var(--brass-hi);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+input[type="range"]:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .inline-pair {
@@ -422,52 +742,74 @@ input[type="range"] {
 
 .inline-pair .slash {
   flex: 0 0 auto;
-  color: var(--muted);
+  color: var(--brass);
+  font-family: var(--font-display);
 }
 
 .slider-field {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  color: var(--muted);
-  font-size: 0.82rem;
+  color: var(--brass);
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.app-header .slider-field {
+  color: var(--brass-hi);
+  text-shadow: 0 1px 0 #000;
 }
 
 .slider-field input {
   width: 96px;
 }
 
-/* Buttons & toggles
+/* Buttons & toggles: bakelite caps in brass bezels
    ========================================================================== */
 
 .btn {
   height: 32px;
-  padding: 0 12px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--panel-2);
+  padding: 0 13px;
+  border: 1px solid #6b4f26;
+  border-radius: 6px;
+  background: linear-gradient(180deg, #3d3025 0%, #261c14 55%, #1b140e 100%);
   color: var(--text);
   font: inherit;
-  font-size: 0.86rem;
-  font-weight: 600;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   cursor: pointer;
   white-space: nowrap;
+  box-shadow:
+    0 1px 0 rgba(255, 230, 170, 0.16) inset,
+    0 2px 0 #0a0604,
+    0 3px 6px rgba(0, 0, 0, 0.5);
+  transition: transform 0.05s, box-shadow 0.05s;
 }
 
 .btn-xs {
   height: 26px;
   padding: 0 9px;
-  border-radius: 6px;
-  font-size: 0.78rem;
+  border-radius: 5px;
+  font-size: 0.7rem;
 }
 
 .btn:hover:not(:disabled) {
-  border-color: #3b4360;
-  background: #252a3a;
+  border-color: var(--brass);
+  background: linear-gradient(180deg, #4a3a2c 0%, #2f231a 55%, #20170f 100%);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 rgba(255, 230, 170, 0.1) inset, 0 0 0 #0a0604, 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 
 .btn:focus-visible {
-  outline: 2px solid var(--melody);
+  outline: 2px solid var(--brass-hi);
   outline-offset: 2px;
 }
 
@@ -477,33 +819,51 @@ input[type="range"] {
 }
 
 .btn-primary {
-  border-color: transparent;
-  background: var(--melody);
-  color: #13101f;
+  border-color: #4a3210;
+  background: var(--brass-face);
+  color: #2b1a07;
+  text-shadow: 0 1px 0 rgba(255, 245, 210, 0.6);
+  box-shadow:
+    0 1px 0 rgba(255, 250, 225, 0.7) inset,
+    0 2px 0 #3a2608,
+    0 3px 8px rgba(0, 0, 0, 0.55);
 }
 
 .btn-primary:hover:not(:disabled) {
-  border-color: transparent;
-  background: #b2a5ff;
+  border-color: #4a3210;
+  background: linear-gradient(180deg, #fff0c0 0%, #e6bd66 38%, #b88a3a 70%, #e0b460 100%);
 }
 
-.btn-drums {
-  background: var(--drums);
-  color: #1f1404;
+.btn-drums,
+.btn-drums:hover:not(:disabled) {
+  background: var(--copper-face);
+  color: #2a1006;
+  text-shadow: 0 1px 0 rgba(255, 220, 190, 0.5);
 }
 
 .btn-drums:hover:not(:disabled) {
-  background: #ffc670;
+  filter: brightness(1.1);
 }
 
 .btn-ghost {
   background: transparent;
+  border-style: dashed;
+  border-color: rgba(212, 169, 79, 0.45);
+  color: var(--brass-hi);
+  box-shadow: none;
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background: rgba(212, 169, 79, 0.1);
+  border-style: solid;
 }
 
 .btn.is-active {
-  background: var(--danger);
-  border-color: transparent;
-  color: #1f0a0d;
+  background: linear-gradient(180deg, #ff8a6a, var(--danger) 45%, #8a2214);
+  border-color: #3a0c06;
+  color: #1f0603;
+  text-shadow: 0 1px 0 rgba(255, 200, 180, 0.45);
+  box-shadow: 0 0 12px rgba(226, 85, 63, 0.55), 0 1px 0 rgba(255, 220, 200, 0.5) inset;
 }
 
 .actions {
@@ -511,60 +871,72 @@ input[type="range"] {
   flex-wrap: wrap;
   align-items: center;
   gap: 8px 10px;
-  margin-top: 12px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(0, 0, 0, 0.6);
+  box-shadow: 0 1px 0 rgba(246, 220, 149, 0.1) inset;
 }
 
 .actions .spacer {
   flex: 1 1 auto;
 }
 
+/* Toggle switches: a brass ball in a lit slot */
 .switch {
   display: inline-flex;
   align-items: center;
   gap: 8px;
   cursor: pointer;
-  font-size: 0.9rem;
+  color: var(--text);
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
   user-select: none;
 }
 
 .switch input {
   appearance: none;
   position: relative;
-  width: 34px;
+  width: 38px;
   height: 20px;
   margin: 0;
+  border: 1px solid #6b4f26;
   border-radius: 999px;
-  background: var(--line);
+  background: linear-gradient(180deg, #000, #22180f);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.9) inset;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background 0.15s, box-shadow 0.15s;
 }
 
 .switch input::after {
   content: "";
   position: absolute;
-  top: 3px;
-  left: 3px;
+  top: 2px;
+  left: 2px;
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: var(--text);
+  background: radial-gradient(circle at 35% 30%, #fff4cc, #d9ad55 45%, #6e4c18);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
   transition: transform 0.15s;
 }
 
 .switch input:checked {
-  background: var(--melody);
+  background: radial-gradient(ellipse at 30% 50%, #ffcf7a, #c27a22 70%);
+  box-shadow: 0 0 8px rgba(255, 170, 60, 0.55), 0 1px 3px rgba(80, 30, 0, 0.8) inset;
 }
 
 .panel-drums .switch input:checked {
-  background: var(--drums);
+  background: radial-gradient(ellipse at 30% 50%, #ffb07a, #c24f1c 70%);
+  box-shadow: 0 0 8px rgba(238, 132, 67, 0.6), 0 1px 3px rgba(80, 20, 0, 0.8) inset;
 }
 
 .switch input:checked::after {
-  transform: translateX(14px);
+  transform: translateX(18px);
 }
 
 .switch input:focus-visible {
-  outline: 2px solid var(--text);
+  outline: 2px solid var(--brass-hi);
   outline-offset: 2px;
 }
 
@@ -580,12 +952,15 @@ input[type="range"] {
   grid-column: span 2;
 }
 
+/* Segmented selectors: a bank of push buttons; the chosen one stays lit. */
 .segmented {
   display: flex;
   height: 32px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
+  border: 1px solid #6b4f26;
+  border-radius: 6px;
   overflow: hidden;
+  background: #0a0604;
+  box-shadow: 0 2px 0 #0a0604, 0 3px 6px rgba(0, 0, 0, 0.45);
 }
 
 .segmented label {
@@ -605,32 +980,45 @@ input[type="range"] {
   align-items: center;
   justify-content: center;
   padding: 0 8px;
-  background: var(--panel-2);
-  font-size: 0.86rem;
-  font-weight: 600;
+  background: linear-gradient(180deg, #3d3025 0%, #261c14 55%, #1b140e 100%);
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
   cursor: pointer;
   white-space: nowrap;
+  box-shadow: 0 1px 0 rgba(255, 230, 170, 0.14) inset;
 }
 
 .segmented label + label span {
-  border-left: 1px solid var(--line);
+  border-left: 1px solid #0a0604;
+}
+
+@media (hover: hover) {
+  .segmented input:not(:checked) + span:hover {
+    color: var(--text);
+  }
 }
 
 .segmented input:checked + span {
-  background: var(--drums);
-  color: #1f1404;
+  background: var(--copper-face);
+  color: #2a1006;
+  text-shadow: 0 1px 0 rgba(255, 220, 190, 0.5);
+  box-shadow: 0 2px 4px rgba(60, 20, 0, 0.6) inset;
 }
 
 .segmented input:focus-visible + span {
-  outline: 2px solid var(--text);
+  outline: 2px solid var(--brass-hi);
   outline-offset: -3px;
 }
 
 .save-status {
   margin: 8px 0 0;
   min-height: 1.2em;
-  color: var(--drums);
-  font-size: 0.85rem;
+  color: var(--lamp);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
 }
 
 .save-status:empty {
@@ -662,12 +1050,16 @@ input[type="range"] {
 
 .host-status {
   padding: 4px 10px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  color: var(--muted);
-  font-size: 0.8rem;
+  border: 1px solid #6b4f26;
+  border-radius: 4px;
+  background: var(--glass);
+  color: var(--lamp);
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
   font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 6px rgba(255, 165, 60, 0.45);
   white-space: nowrap;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.85) inset;
 }
 
 .in-plugin .app-footer {
@@ -678,15 +1070,16 @@ input[type="range"] {
    ========================================================================== */
 
 .mode-field {
-  margin: 0 0 10px;
+  margin: 0 0 12px;
   padding: 0;
   border: 0;
   min-width: 0;
 }
 
 .segmented-modes input:checked + span {
-  background: var(--melody);
-  color: #13101f;
+  background: var(--brass-face);
+  color: #2b1a07;
+  text-shadow: 0 1px 0 rgba(255, 245, 210, 0.6);
 }
 
 .piano-roll.is-tall {
@@ -709,19 +1102,20 @@ input[type="range"] {
   gap: 6px;
   height: 26px;
   padding: 0 9px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: transparent;
+  border: 1px solid #5a4224;
+  border-radius: 4px;
+  background: linear-gradient(180deg, #2d231a, #1d150f);
   color: var(--muted);
   font: inherit;
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   cursor: pointer;
 }
 
 .legend-item[aria-pressed="true"] {
   border-color: var(--melody);
-  background: var(--melody-soft);
+  background: linear-gradient(180deg, #3e3020, #2a1f14);
   color: var(--text);
+  box-shadow: 0 0 8px rgba(224, 180, 90, 0.25);
 }
 
 .legend-item:focus-visible {
@@ -730,12 +1124,14 @@ input[type="range"] {
 }
 
 .legend-item i {
-  width: 9px;
-  height: 9px;
-  border-radius: 3px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1px solid #e8dab4;
+  box-shadow: 0 0 0 1px #000;
 }
 
-/* Instrument picker
+/* Instrument picker: a row of patch-bay plates
    ========================================================================== */
 
 .field-instrument {
@@ -745,27 +1141,47 @@ input[type="range"] {
 .instrument-picker {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: 5px;
 }
 
 .inst {
   position: relative;
   height: 26px;
-  padding: 0 9px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: var(--panel-2);
+  padding: 0 10px 0 20px;
+  border: 1px solid #5a4224;
+  border-radius: 4px;
+  background: linear-gradient(180deg, #33281e, #1f1710);
   color: var(--text);
   font: inherit;
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   cursor: pointer;
   white-space: nowrap;
   touch-action: manipulation;
+  box-shadow: 0 1px 0 rgba(255, 230, 170, 0.1) inset, 0 2px 0 #0a0604;
+}
+
+/* Patch-jack socket; it lights when the instrument is plugged in. */
+.inst::before {
+  content: "";
+  position: absolute;
+  left: 7px;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  margin-top: -4px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #000 0 2px, #8a6a3a 2.5px, #4a3418 4px);
 }
 
 .inst[aria-pressed="true"] {
   border-color: var(--melody);
-  background: var(--melody-soft);
+  background: linear-gradient(180deg, #4a3a24, #2e2216);
+  box-shadow: 0 0 8px rgba(224, 180, 90, 0.25), 0 1px 0 rgba(255, 230, 170, 0.15) inset;
+}
+
+.inst[aria-pressed="true"]::before {
+  background: radial-gradient(circle at 40% 40%, #fff0c0, #ffb347 55%, #b8661a);
+  box-shadow: 0 0 6px 1px rgba(255, 170, 60, 0.7);
 }
 
 .inst[data-order]:not([data-order=""])::after {
@@ -773,16 +1189,17 @@ input[type="range"] {
   position: absolute;
   top: -6px;
   right: -5px;
-  min-width: 14px;
-  height: 14px;
+  min-width: 15px;
+  height: 15px;
   padding: 0 3px;
-  border-radius: 999px;
-  background: var(--melody);
-  color: #13101f;
-  font-size: 0.62rem;
-  font-weight: 700;
-  line-height: 14px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff4cc, #d9ad55 50%, #8a6224);
+  color: #2b1a07;
+  font-size: 0.6rem;
+  font-weight: 800;
+  line-height: 15px;
   text-align: center;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
 }
 
 .inst:focus-visible {
@@ -792,7 +1209,7 @@ input[type="range"] {
 
 @media (hover: hover) {
   .inst:hover {
-    border-color: #3b4360;
+    border-color: var(--brass);
   }
 }
 
@@ -800,16 +1217,17 @@ input[type="range"] {
   margin: 2px 0 0;
   color: var(--muted);
   font-size: 0.78rem;
+  font-style: italic;
 }
 
-/* Song summary
+/* Song summary: brass tags
    ========================================================================== */
 
 .rolled {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
-  margin-top: 10px;
+  gap: 5px;
+  margin-top: 12px;
   min-height: 24px;
 }
 
@@ -817,22 +1235,29 @@ input[type="range"] {
   margin: 0;
   color: var(--muted);
   font-size: 0.86rem;
+  font-style: italic;
 }
 
 .chip {
   display: inline-flex;
   align-items: baseline;
   gap: 6px;
-  padding: 2px 8px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--panel-2);
-  font-size: 0.78rem;
+  padding: 2px 9px;
+  border: 1px solid #6b4f26;
+  border-radius: 3px;
+  background: var(--glass);
+  color: var(--lamp);
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  text-shadow: 0 0 5px rgba(255, 165, 60, 0.35);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.8) inset;
 }
 
 .chip.is-random {
-  border-color: rgba(157, 140, 255, 0.45);
-  background: var(--melody-soft);
+  border-color: rgba(111, 184, 162, 0.5);
+  background: rgba(20, 40, 34, 0.7);
+  color: #9ee0cb;
+  text-shadow: 0 0 5px rgba(111, 184, 162, 0.35);
 }
 
 /* Editing tools
@@ -843,11 +1268,12 @@ input[type="range"] {
   flex-wrap: wrap;
   align-items: center;
   gap: 6px 8px;
-  margin-top: 10px;
-  padding: 8px;
-  border: 1px solid var(--line);
+  margin-top: 12px;
+  padding: 8px 10px;
+  border: 1px solid #5a4224;
   border-radius: var(--radius);
-  background: #13161e;
+  background: var(--ripstop), linear-gradient(180deg, #1a130d, #120c08);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6) inset;
 }
 
 .edit-tools[hidden] {
@@ -856,38 +1282,43 @@ input[type="range"] {
 
 .segmented-sm {
   height: 26px;
-  border-radius: 6px;
+  border-radius: 5px;
 }
 
 .segmented-sm span {
   padding: 0 9px;
-  font-size: 0.78rem;
+  font-size: 0.7rem;
 }
 
 .segmented-sm input:checked + span {
-  background: var(--melody);
-  color: #13101f;
+  background: var(--brass-face);
+  color: #2b1a07;
 }
 
 .snap-field {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: var(--muted);
-  font-size: 0.78rem;
+  color: var(--brass);
+  font-family: var(--font-display);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
 .snap-field select {
   height: 26px;
   width: auto;
-  padding: 0 6px;
-  font-size: 0.78rem;
+  padding: 0 22px 0 6px;
+  font-size: 0.76rem;
 }
 
 .edit-label {
   margin-left: 6px;
   color: var(--muted);
   font-size: 0.78rem;
+  font-style: italic;
 }
 
 .variations {
@@ -905,17 +1336,20 @@ input[type="range"] {
   cursor: not-allowed;
 }
 
-/* Piano roll
+/* Piano roll: a sheet of player-piano parchment behind a brass bezel
    ========================================================================== */
 
 .roll-wrap {
-  margin-top: 6px;
+  margin-top: 8px;
   max-height: 440px;
   overflow: auto;
   -webkit-overflow-scrolling: touch;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: #0d0f15;
+  border: 6px solid transparent;
+  border-radius: 10px;
+  background:
+    linear-gradient(#e8dab4, #e8dab4) padding-box,
+    var(--brass-face) border-box;
+  box-shadow: 0 0 0 1px #2a1a06, 0 6px 14px rgba(0, 0, 0, 0.55), 0 0 18px rgba(90, 55, 15, 0.45) inset;
 }
 
 .piano-roll {
@@ -925,13 +1359,24 @@ input[type="range"] {
   height: 280px;
 }
 
-/* Sequencer
+/* Sequencer: rows of lamp pads
    ========================================================================== */
 
 .feel-info {
   margin: 14px 0 0;
-  color: var(--muted);
-  font-size: 0.88rem;
+  padding: 6px 10px;
+  border: 1px solid #6b4f26;
+  border-radius: 4px;
+  background: var(--glass);
+  color: var(--lamp);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  text-shadow: 0 0 5px rgba(255, 165, 60, 0.35);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.85) inset;
+}
+
+.feel-info:empty {
+  display: none;
 }
 
 .seq-wrap {
@@ -953,45 +1398,53 @@ input[type="range"] {
   gap: 8px;
 }
 
+/* Drum names are little brass nameplates. */
 .seq-name {
   height: 30px;
   padding: 0 10px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: var(--panel-2);
-  color: var(--text);
+  border: 1px solid #3a2608;
+  border-radius: 4px;
+  background: var(--brass-face);
+  color: #2b1a07;
   font: inherit;
-  font-size: 0.82rem;
-  font-weight: 600;
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
   text-align: left;
+  text-shadow: 0 1px 0 rgba(255, 245, 210, 0.6);
   cursor: pointer;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  box-shadow: 0 1px 0 rgba(255, 250, 225, 0.6) inset, 0 2px 0 #0a0604;
 }
 
 .seq-name:hover {
   border-color: var(--drums);
+  filter: brightness(1.08);
 }
 
 .seq-mute {
   width: 34px;
   height: 30px;
   padding: 0;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: transparent;
+  border: 1px solid #6b4f26;
+  border-radius: 4px;
+  background: linear-gradient(180deg, #3d3025, #1b140e);
   color: var(--muted);
   font: inherit;
-  font-size: 0.75rem;
-  font-weight: 700;
+  font-size: 0.72rem;
+  font-weight: 800;
   cursor: pointer;
+  box-shadow: 0 1px 0 rgba(255, 230, 170, 0.14) inset, 0 2px 0 #0a0604;
 }
 
 .seq-mute[aria-pressed="true"] {
-  background: var(--danger);
-  border-color: transparent;
-  color: #1f0a0d;
+  background: radial-gradient(circle at 50% 40%, #ff9a7a, var(--danger) 50%, #7a1a0c);
+  border-color: #3a0c06;
+  color: #1f0603;
+  box-shadow: 0 0 10px rgba(226, 85, 63, 0.6);
 }
 
 .seq-row.is-muted .seq-steps {
@@ -1003,31 +1456,37 @@ input[type="range"] {
   gap: 4px;
 }
 
+/* Each beat sits on its own riveted strip of brass-edged iron. */
 .seq-group {
   display: flex;
   gap: 3px;
   padding: 3px;
-  border-radius: 7px;
-  background: #1a1e29;
+  border: 1px solid #4a3418;
+  border-radius: 6px;
+  background: linear-gradient(180deg, #2a2017, #1a130d);
+  box-shadow: 0 1px 0 rgba(246, 220, 149, 0.12) inset;
 }
 
 .seq-group:nth-child(even) {
-  background: #222737;
+  background: linear-gradient(180deg, #3a2c1e, #241a12);
 }
 
+/* A step is an unlit lamp in a brass ring. */
 .step {
   width: 30px;
   height: 30px;
   padding: 0;
-  border: 1px solid #343b52;
-  border-radius: 5px;
-  background: #11141c;
+  border: 2px solid #7a5822;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #3a2a1c, #120c07 70%);
+  box-shadow: 0 1px 0 rgba(255, 230, 170, 0.25), 0 2px 4px rgba(0, 0, 0, 0.8) inset;
   cursor: pointer;
   transition: background 0.06s, box-shadow 0.06s;
 }
 
 .triplet .step {
   width: 38px;
+  border-radius: 15px;
 }
 
 .step:hover {
@@ -1035,34 +1494,39 @@ input[type="range"] {
 }
 
 .step:focus-visible {
-  outline: 2px solid var(--text);
+  outline: 2px solid var(--brass-hi);
   outline-offset: 1px;
 }
 
 .step[data-v="1"] {
-  background: #b5832f;
-  border-color: #b5832f;
+  background: radial-gradient(circle at 40% 35%, #ffc77a, #c8641e 60%, #6a2c08);
+  border-color: #a87a2f;
+  box-shadow: 0 0 6px rgba(238, 132, 67, 0.45), 0 1px 0 rgba(255, 230, 170, 0.25);
 }
 
 .step[data-v="2"] {
-  background: var(--drums);
-  border-color: #ffd28d;
+  background: radial-gradient(circle at 40% 35%, #fff6d8, #ffb347 45%, #d9701c 80%);
+  border-color: var(--brass-hi);
+  box-shadow: 0 0 14px 2px rgba(255, 170, 60, 0.75), 0 1px 0 rgba(255, 230, 170, 0.3);
 }
 
 .step.is-playing {
-  box-shadow: 0 0 0 2px var(--text);
+  border-color: var(--brass-hi);
+  box-shadow: 0 0 0 2px rgba(246, 220, 149, 0.55), 0 2px 4px rgba(0, 0, 0, 0.8) inset;
 }
 
 .step.is-playing[data-v="1"],
 .step.is-playing[data-v="2"] {
-  background: #fff1d6;
+  background: radial-gradient(circle at 40% 35%, #ffffff, #fff1d6 50%, #ffb347);
+  box-shadow: 0 0 18px 4px rgba(255, 200, 110, 0.85);
 }
 
 .seq-ruler .seq-steps .step-num {
   width: 30px;
   height: 14px;
-  color: var(--muted);
-  font-size: 0.68rem;
+  color: var(--brass);
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
   text-align: center;
   font-variant-numeric: tabular-nums;
 }
@@ -1073,6 +1537,8 @@ input[type="range"] {
 
 .seq-ruler .seq-group {
   background: transparent;
+  border-color: transparent;
+  box-shadow: none;
   padding-top: 0;
   padding-bottom: 0;
 }
@@ -1088,11 +1554,16 @@ input[type="range"] {
 
   .app-header {
     position: static;
-    padding: calc(12px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) 12px calc(16px + env(safe-area-inset-left));
+    padding: calc(12px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) 14px calc(16px + env(safe-area-inset-left));
   }
 
   .tagline {
     display: none;
+  }
+
+  .view-tab {
+    font-size: 0.8rem;
+    letter-spacing: 0.06em;
   }
 
   /* The transport becomes a bottom bar within thumb reach. */
@@ -1104,10 +1575,15 @@ input[type="range"] {
     z-index: 10;
     flex-wrap: nowrap;
     padding: 10px calc(16px + env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left));
-    border-top: 1px solid var(--line);
-    background: rgba(12, 14, 19, 0.96);
-    -webkit-backdrop-filter: blur(8px);
-    backdrop-filter: blur(8px);
+    border-top: 3px solid var(--brass-lo);
+    background:
+      repeating-linear-gradient(115deg, rgba(0, 0, 0, 0.08) 0 2px, transparent 2px 5px),
+      linear-gradient(180deg, var(--leather-2), var(--leather));
+    box-shadow: 0 -6px 16px rgba(0, 0, 0, 0.55);
+  }
+
+  .transport .vu {
+    display: none;
   }
 
   .transport .slider-field {
@@ -1134,7 +1610,7 @@ input[type="range"] {
   }
 
   .panel {
-    padding: 16px;
+    padding: 18px 16px;
   }
 
   .app-footer {
@@ -1278,17 +1754,27 @@ input[type="range"] {
     width: auto;
     min-width: 0;
     height: 40px;
+    border-radius: 12px;
   }
 }
 
 /* Touch screens: no sticky hover outlines, no double-tap zoom. */
 @media (hover: none) {
   .step:hover {
-    border-color: #343b52;
+    border-color: #7a5822;
+  }
+
+  .step[data-v="1"]:hover {
+    border-color: #a87a2f;
+  }
+
+  .step[data-v="2"]:hover {
+    border-color: var(--brass-hi);
   }
 
   .seq-name:hover {
-    border-color: var(--line);
+    border-color: #3a2608;
+    filter: none;
   }
 }
 
