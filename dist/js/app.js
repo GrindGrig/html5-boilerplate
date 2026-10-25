@@ -1551,6 +1551,9 @@
       comp.attack.value = 0.005;
       comp.release.value = 0.15;
       comp.connect(ctx.destination);
+      audio.meter = ctx.createAnalyser();
+      audio.meter.fftSize = 1024;
+      comp.connect(audio.meter);
 
       audio.master = ctx.createGain();
       audio.master.gain.value = Number($('master-volume').value);
@@ -2999,16 +3002,18 @@
     const L = rollLayout();
     const y = (p) => CHORD_LANE + (L.maxP - p) * L.rowH;
 
-    g.fillStyle = '#0d0f15';
+    g.fillStyle = '#e8dab4';
     g.fillRect(0, 0, roll.w, roll.h);
     for (let p = L.minP; p <= L.maxP; p++) {
       if (BLACK.has(mod(p, 12))) {
-        g.fillStyle = '#12151d';
+        g.fillStyle = '#dccb9c';
         g.fillRect(0, y(p), roll.w, L.rowH);
       }
       if (mod(p, 12) === 0) {
-        g.fillStyle = '#4a5068';
-        g.font = '10px system-ui, sans-serif';
+        g.fillStyle = '#c9b383';
+        g.fillRect(0, y(p) + L.rowH - 1, roll.w, 1);
+        g.fillStyle = '#7a5a2e';
+        g.font = 'italic 10px Georgia, serif';
         g.fillText(`C${Math.floor(p / 12) - 1}`, 4, y(p) + L.rowH - 2);
       }
     }
@@ -3018,7 +3023,7 @@
     for (let b = 0; b < m.bars; b++) {
       starts.forEach((s, i) => {
         const x = Math.round((b * m.barTicks + s) * L.xPerTick) + 0.5;
-        g.strokeStyle = i === 0 ? '#3a4158' : '#1d2130';
+        g.strokeStyle = i === 0 ? '#8a6a3a' : '#cdb98a';
         g.beginPath();
         g.moveTo(x, i === 0 ? 0 : CHORD_LANE);
         g.lineTo(x, roll.h);
@@ -3027,14 +3032,16 @@
     }
 
     // Chord lane
-    g.fillStyle = '#141824';
+    g.fillStyle = '#3a2718';
     g.fillRect(0, 0, roll.w, CHORD_LANE);
-    g.font = '600 11px system-ui, sans-serif';
+    g.fillStyle = '#a87a2f';
+    g.fillRect(0, CHORD_LANE - 2, roll.w, 2);
+    g.font = '600 11px Georgia, serif';
     m.chords.forEach((c) => {
       const x = chordTick(m, c) * L.xPerTick;
       const w = chordLen(m, c) * L.xPerTick;
       if (w > 28) {
-        g.fillStyle = '#ffb547';
+        g.fillStyle = '#f0c76a';
         g.fillText(c.name, x + 5, 15, w - 8);
       }
     });
@@ -3053,13 +3060,13 @@
         const w = Math.max(2, n.dur * L.xPerTick - 1.5);
         const top = y(n.midi) + 1;
         const h = Math.max(2, L.rowH - 2);
-        g.fillStyle = `rgba(${rgb}, ${(0.55 + n.vel * 0.45) * fade})`;
+        g.fillStyle = `rgba(${rgb}, ${(0.6 + n.vel * 0.4) * fade})`;
         g.beginPath();
         if (g.roundRect) g.roundRect(x, top, w, h, Math.min(3, h / 2));
         else g.rect(x, top, w, h);
         g.fill();
         if (editing && active) {
-          g.strokeStyle = 'rgba(255, 255, 255, 0.55)';
+          g.strokeStyle = 'rgba(30, 16, 4, 0.8)';
           g.lineWidth = 1;
           g.stroke();
         }
@@ -3073,10 +3080,10 @@
     if (!g) return;
     g.clearRect(0, 0, roll.w, roll.h);
     if (!melody) {
-      g.fillStyle = '#0d0f15';
+      g.fillStyle = '#e8dab4';
       g.fillRect(0, 0, roll.w, roll.h);
-      g.fillStyle = '#5b627a';
-      g.font = '14px system-ui, sans-serif';
+      g.fillStyle = '#8a6a3a';
+      g.font = 'italic 15px Georgia, serif';
       g.textAlign = 'center';
       g.fillText('Your melody will appear here', roll.w / 2, roll.h / 2);
       g.textAlign = 'left';
@@ -3089,9 +3096,9 @@
     g.restore();
     if (fraction !== null) {
       const x = fraction * roll.w;
-      g.fillStyle = 'rgba(255, 255, 255, 0.06)';
+      g.fillStyle = 'rgba(120, 70, 20, 0.08)';
       g.fillRect(0, CHORD_LANE, x, roll.h - CHORD_LANE);
-      g.fillStyle = '#ffffff';
+      g.fillStyle = '#a3261b';
       g.fillRect(Math.round(x), 0, 2, roll.h);
       followPlayhead(x);
     }
@@ -3605,7 +3612,8 @@
     }
   }
 
-  const PART_COLORS = ['157, 140, 255', '62, 207, 178', '90, 169, 255', '255, 138, 170', '240, 200, 90', '150, 215, 110', '210, 160, 255', '110, 200, 230', '255, 170, 110'];
+  // Inks that read on the parchment piano roll.
+  const PART_COLORS = ['150, 38, 30', '28, 110, 96', '34, 66, 140', '196, 98, 30', '112, 46, 112', '96, 110, 28', '150, 108, 20', '40, 104, 140', '170, 52, 80'];
   const partColor = (i) => PART_COLORS[i % PART_COLORS.length];
 
   // The legend doubles as the part picker for editing and variations.
@@ -4099,6 +4107,10 @@
     if (dp.shown >= 0 && stepEls[dp.shown]) stepEls[dp.shown].forEach((el) => el.classList.remove('is-playing'));
     if (step >= 0 && stepEls[step]) stepEls[step].forEach((el) => el.classList.add('is-playing'));
     dp.shown = step;
+    if (IN_PLUGIN && step >= 0 && stepEls[step]) {
+      const hit = stepEls[step].reduce((v, el) => Math.max(v, Number(el.dataset.v) || 0), 0);
+      if (hit) kickMeter(hit === 2 ? 0.85 : 0.6);
+    }
   }
 
   function updateFeelInfo() {
@@ -4208,8 +4220,41 @@
     const all = mp.playing && dp.playing;
     $('play-all').textContent = all ? 'Restart all' : 'Play all';
     const active = mp.playing || dp.playing;
+    document.body.classList.toggle('is-playing', active);
+    if (active) runMeter();
     setMediaSession(active);
     setWakeLock(active);
+  }
+
+  // The VU meter in the header follows the output level. In the plugin the
+  // sound is made by the host, so the needle swings on drum hits instead.
+  const vu = { level: 0, kick: 0, frame: 0, buf: null };
+
+  function kickMeter(amount) {
+    vu.kick = Math.max(vu.kick, amount);
+    runMeter();
+  }
+
+  function runMeter() {
+    if (vu.frame || !$('vu')) return;
+    const tick = () => {
+      let target = vu.kick;
+      vu.kick *= 0.9;
+      if (audio.meter) {
+        if (!vu.buf) vu.buf = new Float32Array(audio.meter.fftSize);
+        audio.meter.getFloatTimeDomainData(vu.buf);
+        let sum = 0;
+        for (let i = 0; i < vu.buf.length; i++) sum += vu.buf[i] * vu.buf[i];
+        const db = 20 * Math.log10(Math.sqrt(sum / vu.buf.length) + 1e-6);
+        target = Math.max(target, Math.min(1, Math.max(0, (db + 36) / 36)));
+      }
+      // A real needle rises quickly and falls back slowly.
+      vu.level += (target - vu.level) * (target > vu.level ? 0.35 : 0.08);
+      $('vu').style.setProperty('--vu', vu.level.toFixed(3));
+      const busy = mp.playing || dp.playing || vu.level > 0.002;
+      vu.frame = busy ? requestAnimationFrame(tick) : 0;
+    };
+    vu.frame = requestAnimationFrame(tick);
   }
 
   // Keeps a phone screen awake while music is playing.
